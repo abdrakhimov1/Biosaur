@@ -466,6 +466,8 @@ def worker_data_to_features(data_for_analyse, qout, start_index, end_index, mass
 def boosting_firststep_with_processes(number_of_processes, input_mzml_path, mass_accuracy, min_length):
     
     data_for_analyse = list(z for z in mzml.read(input_mzml_path) if z['ms level'] == 1)
+    for idx, v in enumerate(data_for_analyse):
+        v['index'] = idx + 1
 
     if number_of_processes == 0:
 
