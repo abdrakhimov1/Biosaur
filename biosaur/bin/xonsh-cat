@@ -1,0 +1,4 @@
+#!/home/zloydanny/working_area_latest/bio/bio_project/biosaur/biosaur/bin/python3 -u
+# EASY-INSTALL-SCRIPT: 'xonsh==0.9.11','xonsh-cat'
+__requires__ = 'xonsh==0.9.11'
+__import__('pkg_resources').run_script('xonsh==0.9.11', 'xonsh-cat')

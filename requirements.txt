@@ -1,0 +1,6 @@
+numpy
+scipy
+pandas
+pyteomics==4.1.2
+lxml
+matplotlib
