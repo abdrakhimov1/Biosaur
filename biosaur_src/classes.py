@@ -1,4 +1,4 @@
-from .funcs import *
+from funcs import *
 from copy import copy
 from pyteomics import mzml
 import pandas as pd
@@ -6,12 +6,21 @@ from scipy import spatial
 from scipy.spatial import KDTree
 import numpy as np
 from scipy.stats import binom
+from scipy.signal import medfilt
+
+
+def meanfilt(data, window_width):
+    cumsum_vec = np.cumsum(np.insert(data, 0, 0)) 
+    ma_vec = (cumsum_vec[window_width:] - cumsum_vec[:-window_width]) / window_width
+    return ma_vec
+
 
 class ready_hill:
     
     def __init__(self, intensity, scan_id, mass):
 
-        self.mz = np.mean(mass)
+        self.mz = np.median(mass)
+        self.mz_std = np.std(mass)
         
         self.intensity = intensity
         self.scan_id = scan_id
@@ -21,12 +30,9 @@ class ready_hill:
         self.max_intensity = self.intensity[tmp]
         self.scan_len = len(self.scan_id)
 
-
-    def set_new_hill(self, start_index, end_index):
-        
-        new_hill = ready_hill(self.intensity[start_index:end_index], self.scan_id[start_index:end_index], self.mass[start_index:end_index])
-
-        return new_hill
+        self.idict = dict()
+        for i, j in zip(self.scan_id, self.intensity):
+            self.idict[i] = j
 
 class next_peak:
     
@@ -39,27 +45,32 @@ class next_peak:
 
         
 class peak:
-    def __init__(self, mz_array, intensity, scan_id):
+    def __init__(self, mz_array, intensity, scan_id, start_id):
         
         self.mz_array = copy(mz_array)
         
-        self.scan_id = []
+        self.scan_id = [[scan_id, ] for _ in range(len(mz_array))]
+        # self.scan_id = []
 
-        for _ in range(len(mz_array)):
-            self.scan_id.append([scan_id, ])
+        # for _ in range(len(mz_array)):
+        #     self.scan_id.append([scan_id, ])
 
         
         
-        self.intensity = []
-        for i in intensity:
-            self.intensity.append([i, ])
+        self.intensity = [[i, ] for i in intensity]
+        # self.intensity = []
+        # for i in intensity:
+        #     self.intensity.append([i, ])
         
-        self.mass_array = []
-        for i in mz_array:
-            self.mass_array.append([i, ])
+        self.mass_array = [[i, ] for i in mz_array]
+        # self.mass_array = []
+        # for i in mz_array:
+        #     self.mass_array.append([i, ])
             
         self.finished_hills = []
         self.crosslinked_hills = []
+
+        self.intervals = [start_id, ]
     
     def concat_peak_with(self, second_peak):
         
@@ -68,9 +79,75 @@ class peak:
         self.mass_array = self.mass_array + second_peak.mass_array
         self.finished_hills = self.finished_hills + second_peak.finished_hills
         self.crosslinked_hills = self.crosslinked_hills + second_peak.crosslinked_hills
+        self.intervals = self.intervals + second_peak.intervals
 
 
-    
+    def crosslink_simple(self, mass_accuracy):
+        
+        crosslink_counter = 0
+        crosslink_counter2 = 0
+        self.finished_hills = sorted(self.finished_hills, key = lambda x: x.scan_id[0])
+
+        allowed_ids = set()
+        for i in self.intervals:
+            allowed_ids.add(i-1)
+            allowed_ids.add(i)
+            allowed_ids.add(i+1)
+
+        # for idx, hill in enumerate(self.finished_hills):
+
+        #     for hill2 in self.finished_hills[idx+1:]:
+
+        #         if hill.scan_id[-1] == hill2.scan_id[0]:
+                    
+        #             #self.crosslinked_hills.append(ready_hill(hill.mz + hill2.mz, hill.intensity + hill2.intensity, hill.scan_id + hill2.scan_id, hill.mass + hill2.mass)) # добавить сшивку, счетчик сшитых, проверку на массу и косинусную корреляцию
+        #             self.crosslinked_hills.append(ready_hill(hill.mz + hill2.mz, hill.intensity + hill2.intensity, hill.scan_id + hill2.scan_id, hill.mass + hill2.mass))
+        #             crosslink_counter += 1
+
+        #         else:
+
+        #             self.crosslinked_hills.append(hill)
+
+        i = 0 
+        ini_len = len(self.finished_hills)   
+
+        while i < ini_len:
+            
+            hill = self.finished_hills[i]
+
+            if hill.scan_id[-1] in allowed_ids:
+                j = i + 1
+
+                while j < ini_len:
+
+                    hill2 = self.finished_hills[j]
+
+                    if hill2.scan_id[0] in allowed_ids:
+
+                        #if hill.scan_id[-1] == hill2.scan_id[0]:
+                        if abs(hill.scan_id[-1] - hill2.scan_id[0]) <= 1:
+                            #crosslink_counter2 += 1
+                            if abs(hill.mz - hill2.mz)/hill.mz <= mass_accuracy * 1e-6:
+
+                                self.finished_hills[i] = ready_hill(intensity=hill.intensity + hill2.intensity, scan_id=hill.scan_id + hill2.scan_id, mass=hill.mass + hill2.mass)
+                                del self.finished_hills[j]
+                                ini_len -= 1
+                                crosslink_counter += 1
+                                j -= 1
+                        elif hill2.scan_id[0] > hill.scan_id[-1] +1:
+                            break
+
+                    elif hill2.scan_id[0] > hill.scan_id[-1] + 1:
+                        break
+
+                    j += 1
+                    
+
+            i += 1
+
+
+        #print(crosslink_counter)
+        #print(crosslink_counter2)   
 
     def crosslink(self, mass_accuracy):
         
@@ -135,16 +212,31 @@ class peak:
 
         mask_to_del = [True] * self.mz_array.size
         for i in range(self.mz_array.size)[::-1]:
-            if id_real - self.scan_id[i][-1] > check_degree:
+            # degree_actual = id_real + 1 - len(self.scan_id[i]) - self.scan_id[i][0] 
+            degree_actual = id_real - self.scan_id[i][-1] 
+            if degree_actual > check_degree:# or (degree_actual == 2 and len(self.scan_id[i]) == 1):
+            # degree_actual = id_real + 1 - len(self.scan_id[i]) - self.scan_id[i][0] 
+            # degree_actual = id_real - self.scan_id[i][-1] 
+            # if degree_actual > check_degree or (degree_actual == 2 and len(self.scan_id[i]) <= 3):
 
-                tmp_ready_hill = ready_hill(intensity = self.intensity.pop(i), 
-                                            scan_id = self.scan_id.pop(i), 
-                                            mass = self.mass_array.pop(i), 
-                                            )
+                list_intensity = self.intensity.pop(i)
+                list_scan_id = self.scan_id.pop(i)
+                list_mass = self.mass_array.pop(i)
+                if len(list_scan_id) >= min_length:
+                # tmp_ready_hill = ready_hill(intensity = self.intensity.pop(i), 
+                #                             scan_id = self.scan_id.pop(i), 
+                #                             mass = self.mass_array.pop(i), 
+                #                             )
+                    tmp_ready_hill = ready_hill(intensity = list_intensity, 
+                                                scan_id = list_scan_id, 
+                                                mass = list_mass, 
+                                                )
+                    self.finished_hills.append(tmp_ready_hill)
+
                 mask_to_del[i] = False
                 
-                if len(tmp_ready_hill.scan_id) >= min_length:
-                    self.finished_hills.append(tmp_ready_hill)
+                # if len(tmp_ready_hill.scan_id) >= min_length:
+                #     self.finished_hills.append(tmp_ready_hill)
                     
         self.mz_array = self.mz_array[mask_to_del]
         
@@ -182,7 +274,7 @@ class peak:
         #     if i1 >= nearest:
         #         break
                    
-        cnt2 = nearest -1 - sum(mask[:nearest-1])
+        cnt2 = nearest - 1 - sum(mask[:nearest-1])
         #print(cnt-cnt2)
             
         return cnt2 + nearest
@@ -314,7 +406,37 @@ class peak:
 
                 del self.finished_hills[idx]
         
+    def split_peaks(self, hillValleyFactor):
+        set_to_del = set()
+        new_hills = []
+        for hill_idx, hill in enumerate(self.finished_hills):
+            smothed_intensity = meanfilt(hill.intensity, 3)
+            smothed_intensity = medfilt(smothed_intensity, 3)
 
+            c_len = len(smothed_intensity) - 3
+            idx = 3
+            min_idx = False
+            min_val = 1.0
+            while idx <= c_len:
+                l_r = float(smothed_intensity[idx]) / max(smothed_intensity[:idx])
+                r_r = float(smothed_intensity[idx]) / max(smothed_intensity[idx:])
+            #     print(l_r, r_r)
+                if l_r < hillValleyFactor and r_r < hillValleyFactor:
+                    mult_val = l_r * r_r
+                    if mult_val < min_val:
+                        min_val = mult_val
+                        min_idx = idx
+                idx += 1
+            if min_idx:
+                set_to_del.add(hill_idx)
+                new_hills.append(ready_hill(intensity=hill.intensity[:min_idx], scan_id=hill.scan_id[:min_idx], mass=hill.mass[:min_idx]))
+                new_hills.append(ready_hill(intensity=hill.intensity[min_idx:], scan_id=hill.scan_id[min_idx:], mass=hill.mass[min_idx:]))
+        print(len(new_hills))
+        print(len(set_to_del))
+
+        for idx in sorted(list(set_to_del))[::-1]:
+            del self.finished_hills[idx]
+        self.finished_hills.extend(new_hills)
 
     #self.finished_hills = result
 
@@ -323,9 +445,10 @@ class feature:
     def __init__(self, finished_hills, each):
 
         self.charge = each[1][0][1]
+        self.shift = each[3]
         #self.mz = finished_hills[each[0]].mz
         self.mz = np.median(finished_hills[each[0]].mass)
-        self.neutral_mass = self.mz * self.charge - 1.0073 * self.charge
+        self.neutral_mass = self.mz * self.charge - 1.0073 * self.charge - self.shift * 1.00335
 
         self.isotopes_numb = len(each[1])
         
