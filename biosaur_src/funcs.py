@@ -260,7 +260,7 @@ def iter_hills(peak, min_charge, max_charge, min_intensity, mass_acc, start_inde
 #         prec_isotopes.append(prec_is - prec_minisotopes[-1])
         a[i] = int_arr_norm
         
-    
+    end_index = min(end_index, len(peak.finished_hills))
     size = end_index
     
     ready_set = set()
@@ -468,7 +468,7 @@ def boosting_firststep_with_processes(number_of_processes, input_mzml_path, mass
     data_for_analyse = list(z for z in mzml.read(input_mzml_path) if z['ms level'] == 1)
     for idx, v in enumerate(data_for_analyse):
         v['index'] = idx + 1
-
+        
     if number_of_processes == 0:
 
         try:
@@ -491,7 +491,7 @@ def boosting_firststep_with_processes(number_of_processes, input_mzml_path, mass
         procs = []
 
         data_for_analyse_len = len(data_for_analyse)
-        step = int(data_for_analyse_len / number_of_processes)
+        step = int(data_for_analyse_len / number_of_processes) + 1
         start_index = 0
 
         for i in range(number_of_processes):
@@ -556,7 +556,7 @@ def boosting_secondstep_with_processes(number_of_processes, peak, min_charge, ma
         procs = []
 
         peak_len = len(peak.finished_hills)
-        step = int(peak_len / number_of_processes)
+        step = int(peak_len / number_of_processes) + 1
         start_index = 0
 
         for i in range(number_of_processes):
