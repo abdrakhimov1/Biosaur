@@ -1,4 +1,4 @@
-from funcs import *
+from . import funcs
 from copy import copy
 from pyteomics import mzml
 import pandas as pd
@@ -431,8 +431,8 @@ class peak:
                 set_to_del.add(hill_idx)
                 new_hills.append(ready_hill(intensity=hill.intensity[:min_idx], scan_id=hill.scan_id[:min_idx], mass=hill.mass[:min_idx]))
                 new_hills.append(ready_hill(intensity=hill.intensity[min_idx:], scan_id=hill.scan_id[min_idx:], mass=hill.mass[min_idx:]))
-        print(len(new_hills))
-        print(len(set_to_del))
+        #print(len(new_hills))
+        #print(len(set_to_del))
 
         for idx in sorted(list(set_to_del))[::-1]:
             del self.finished_hills[idx]

@@ -1,4 +1,5 @@
-from . import funcs, classes
+from . import funcs
+from . import classes
 from copy import copy
 from pyteomics import mzml
 import pandas as pd
@@ -21,6 +22,7 @@ def process_files(args):
     max_charge = args['max_charge']
     min_intensity = args['min_intensity']
     output_file = args['output_file']
+    hillValleyFactor = args['hill_valley_factor']
     
     #input_mzml_path = 'plasma.mzML'
     #test_peak, test_RT_dict = funcs.boosting_with_processes('plasma.mzML', mass_accuracy, 3)
@@ -36,6 +38,11 @@ def process_files(args):
 
     #test_peak.crosslink(mass_accuracy)
     #test_peak.cutting_down(0.5)
+
+    test_peak.crosslink_simple(mass_accuracy)
+    test_peak.split_peaks(hillValleyFactor)
+    test_peak.split_peaks(hillValleyFactor)
+
     test_peak.sort_finished_hills()
 
 
