@@ -1,4 +1,4 @@
-from classes import *
+from . import classes
 from copy import copy
 from pyteomics import mzml
 import pandas as pd
@@ -41,7 +41,7 @@ def check_its_ready(id_real, peak, check_degree):
     for i in range(len(mz_list)):
         if id_real - scan_list[i][-1] > check_degree:
             
-            tmp_ready_hill = ready_hill(intensity = peak.intensity.pop(i), 
+            tmp_ready_hill = classes.ready_hill(intensity = peak.intensity.pop(i), 
                                         scan_id = peak.scan_id.pop(i), 
                                         mass = peak.mass_array.pop(i), 
                                         mz = peak.mz_array.pop(i))
@@ -73,11 +73,11 @@ def data_to_features(input_file, max_diff, min_length):
     for i in input_file:
         #print(i)
         if k == 0:
-            peak1 = peak(i['m/z array'], i['intensity array'], i['index'], i['index'])
+            peak1 = classes.peak(i['m/z array'], i['intensity array'], i['index'], i['index'])
             RT_dict[i['index']] = float(i['scanList']['scan'][0]['scan start time'])
     
         if k > 0:
-            next_peak_i = next_peak(i['m/z array'], i['intensity array'], i['index'])
+            next_peak_i = classes.next_peak(i['m/z array'], i['intensity array'], i['index'])
             peak1.push_me_to_the_peak(next_peak_i, max_diff, min_length)
             RT_dict[i['index']] = float(i['scanList']['scan'][0]['scan start time'])
         # if k > 10:
