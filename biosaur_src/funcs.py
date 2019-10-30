@@ -80,8 +80,8 @@ def data_to_features(input_file, max_diff, min_length):
             next_peak_i = classes.next_peak(i['m/z array'], i['intensity array'], i['index'])
             peak1.push_me_to_the_peak(next_peak_i, max_diff, min_length)
             RT_dict[i['index']] = float(i['scanList']['scan'][0]['scan start time'])
-        # if k > 10:
-        #     break
+        #if k > 10:
+            #break
             #pass
         k+=1
     #print(peak1.mz_array)
@@ -544,7 +544,7 @@ def boosting_secondstep_with_processes(number_of_processes, peak, min_charge, ma
     
     if number_of_processes == 1:
         
-        ready_q = iter_hills(peak, min_charge, max_charge, min_intensity, mass_accuracy, 0, len(peak.finished_hills))
+        result_q = iter_hills(peak, min_charge, max_charge, min_intensity, mass_accuracy, 0, len(peak.finished_hills))
     
     else:
         qout = Queue()
