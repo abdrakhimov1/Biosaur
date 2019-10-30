@@ -15,7 +15,7 @@ def process_files(args):
     start_time = time.time()
     print('Starting program...')
     input_mzml_path = args['input_mzml_path'][0]
-    number_of_processes = 0
+    number_of_processes = int(args['number_of_processes'])
     mass_accuracy = args['mass_accuracy']
     min_length = args['min_length']
     min_charge = args['min_charge']

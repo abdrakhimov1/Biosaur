@@ -17,6 +17,7 @@ def run():
         formatter_class=argparse.ArgumentDefaultsHelpFormatter)
 
     parser.add_argument('input_mzml_path', nargs='+', help='input MZML file')
+    parser.add_argument('-np', '--number_of_processes', help='Number of processes', default=0)
     parser.add_argument('-ac', '--mass_accuracy', help='Mass accuracy', default=8)
     parser.add_argument('-minc', '--min_charge', help='Minimum charge', default=1)
     parser.add_argument('-maxc', '--max_charge', help='Maximum charge', default=6)
