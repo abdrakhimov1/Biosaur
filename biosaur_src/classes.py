@@ -24,6 +24,7 @@ class ready_hill:
         
         self.intensity = intensity
         self.scan_id = scan_id
+        self.scan_set = set(scan_id)
         self.mass = mass
         tmp = max(range(len(self.intensity)), key=self.intensity.__getitem__)
         self.scan_of_max_intensity = self.scan_id[tmp]
@@ -257,29 +258,39 @@ class peak:
         self.mz_array = self.mz_array[mask_to_del] 
         
     def get_nearest_value(self, value, mask):
-        #return min(self.mz_array[mask], key=lambda x: abs(x - value))
-        #return min(np.abs(self.mz_array[mask]-value))
         return np.argmin(np.abs(self.mz_array[mask]-value))
     
     def newid(self, nearest, mask):
-        
-        #cnt = 0
-        #i1 = 0
-        
-        # while True:
-        #     if not mask[i1]:
-        #         cnt += 1
-        #     i1 += 1
-            
-        #     if i1 >= nearest:
-        #         break
-                   
         cnt2 = nearest - 1 - sum(mask[:nearest-1])
-        #print(cnt-cnt2)
-            
         return cnt2 + nearest
-        
-    
+
+    def get_nearest_id(self, i, prev_nearest, diff, mz_array_l):    
+        mass_diff = diff * 1e-6 * i
+        best_diff = 2 * mass_diff
+        best_id = False
+        cur_md_abs = 0
+
+        nearest_id = prev_nearest
+        while nearest_id < mz_array_l:
+            cur_md = self.mz_array[nearest_id] - i
+            cur_md_abs = abs(cur_md)
+            if cur_md_abs <= mass_diff:
+                if cur_md_abs <= best_diff:
+                    best_diff = float(cur_md_abs)
+                    best_id = int(nearest_id)
+                    prev_nearest = int(nearest_id)
+            elif cur_md > mass_diff:
+                break
+
+            nearest_id += 1
+        return best_id, best_diff / i
+
+    def get_arrays(self, tmp1):
+        tmp1_nearest_id_arr = np.array([ x[0] for x in tmp1])
+        tmp1_idx_arr = np.array([x[1] for x in tmp1])
+        tmp1_diff_arr = np.array([ x[2] for x in tmp1])
+        return tmp1_nearest_id_arr, tmp1_idx_arr, tmp1_diff_arr
+
     def push_me_to_the_peak(self, next_peak, diff, min_length):
         
         next_mz_array = next_peak.next_mz_array
@@ -292,21 +303,18 @@ class peak:
         tmp1 = []
         tmp2 = []
 
-        #FIXME
-        #изменить метод добавления в пик. Применять среднее значение по предыдущим объектам
+        prev_nearest = 0
+
+        mz_array_l = len(self.mz_array)
         for idx, i in enumerate(next_mz_array):
-            nearest = self.get_nearest_value(i, mask)
-            nearest_id = self.newid(nearest, mask)
-            #nearest_id = np.nonzero(self.mz_array == nearest)[0][0]
-            tmp_diff = abs(self.mz_array[nearest_id] - i) / i
-            if tmp_diff <= diff * 1e-6:
-                tmp1.append([nearest_id, idx, tmp_diff])
+            best_id, md_res = self.get_nearest_id(i, prev_nearest, diff, mz_array_l)
+            if best_id:
+                prev_nearest = best_id
+                tmp1.append([best_id, idx, md_res])
 
+        mask = [True]  * (len(self.mz_array))
 
-        
-        tmp1_nearest_id_arr = np.array([ x[0] for x in tmp1])
-        tmp1_idx_arr = np.array([x[1] for x in tmp1])
-        tmp1_diff_arr = np.array([ x[2] for x in tmp1])
+        tmp1_nearest_id_arr, tmp1_idx_arr, tmp1_diff_arr = self.get_arrays(tmp1)
         
         sort_list = np.argsort(tmp1_diff_arr) #try different kinds
         tmp1_nearest_id_arr =  tmp1_nearest_id_arr[sort_list]
@@ -326,15 +334,11 @@ class peak:
                 break
 
             tmp2.append((tmp1_nearest_id_arr[0], tmp1_idx_arr[0]))
-
-            #tmp_id = [x[2] for x in tmp1].index(min(x[2] for x in tmp1))
-            # tmp2.append(tmp1[tmp_id])
             
             saved_index.add(tmp1_idx_arr[0])
 
             mask[tmp2[-1][0]] = False
-            if sum(mask):
-                # del tmp1[tmp_id]
+            if any(mask):
                 tmp1_nearest_id_arr = tmp1_nearest_id_arr[1:]
 
                 tmp1_idx_arr = tmp1_idx_arr[1:]
@@ -351,11 +355,8 @@ class peak:
 
                         if element in saved_index:
 
-                        # if element[0] == tmp2[-1][0]:
-
                             nearest = self.get_nearest_value(element, mask)
                             nearest_id = self.newid(nearest, mask)
-                            #element[0] = np.nonzero(self.mz_array == nearest)[0][0]
                             tmp1_nearest_id_arr[idx] = nearest_id
                             
                             tmp1_diff_arr[idx] = abs(self.mz_array[nearest_id] - element)/element
@@ -368,11 +369,7 @@ class peak:
 
             else:
                 break
-        
-
-        #print(self.mass_array[1])
-
-
+                
         for i, idx in tmp2:
             #FIXME
             #self.mz_array[i] = (self.mz_array[i] + next_mz_array[idx])/2
@@ -388,14 +385,23 @@ class peak:
         next_mz_array_size = next_mz_array[mask2].size
         self.mz_array = np.append(self.mz_array, next_mz_array[mask2])
         
+        n_i_a_m = next_intensity_array[mask2]
+        n_m_a_m = next_mz_array[mask2]
         for i in range(next_mz_array_size):
             self.scan_id.append([next_scan_id, ])
-            self.intensity.append([next_intensity_array[mask2][i], ])
-            self.mass_array.append([next_mz_array[mask2][i], ])
+            self.intensity.append([n_i_a_m[i], ])
+            self.mass_array.append([n_m_a_m[i], ])
+
+        self.selfsort()
+
+    def selfsort(self):
+        idx = np.argsort(self.mz_array)
+        self.mz_array = self.mz_array[idx]
+        self.scan_id = [self.scan_id[i] for i in idx]
+        self.intensity = [self.intensity[i] for i in idx]
+        self.mass_array = [self.mass_array[i] for i in idx]
 
     def cutting_down(self, intensity_propotion):
-
-    #result = []
 
         for idx, peak in enumerate(self.finished_hills):
             

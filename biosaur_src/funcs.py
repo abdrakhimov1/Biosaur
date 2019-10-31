@@ -136,8 +136,9 @@ def cos_correlation_new(theoretical_list, experimental_list, shf):
 
 def cos_correlation_fill_zeroes(hill_1, hill_2):
 
-    common_set = set(hill_1.scan_id + hill_2.scan_id)
-    
+    # common_set = set(hill_1.scan_id + hill_2.scan_id)
+    common_set = hill_1.scan_set.union(hill_2.scan_set)
+
     top = 0
     bot_h1 = 0
     bot_h2 = 0
@@ -323,8 +324,9 @@ def iter_hills(peak, min_charge, max_charge, min_intensity, mass_acc, start_inde
                                 break
                                 # print(cos_correlation_fill_zeroes(peak.finished_hills[i], peak.finished_hills[j]))
                             if abs(diff) <= mz_tol:
-                                if 1 or (left_border_i - 1 <= left_border_j and right_border_i + 1 >= right_border_j) or \
-                                    (left_border_j - 1 <= left_border_i and right_border_j + 1 >= right_border_i):
+                                # if 1 or (left_border_i - 1 <= left_border_j and right_border_i + 1 >= right_border_j) or \
+                                #     (left_border_j - 1 <= left_border_i and right_border_j + 1 >= right_border_i):
+                                if len(peak.finished_hills[i].scan_set.intersection(peak.finished_hills[j].scan_set)):
 
                                     # if abs(middle_index_i - middle_index_j) <= max(1, 0.5 *max(j_len, i_len)):
                                     if cos_correlation_fill_zeroes(peak.finished_hills[i], peak.finished_hills[j]) >= 0.7:
@@ -468,6 +470,7 @@ def boosting_firststep_with_processes(number_of_processes, input_mzml_path, mass
     data_for_analyse = list(z for z in mzml.read(input_mzml_path) if z['ms level'] == 1)
     for idx, v in enumerate(data_for_analyse):
         v['index'] = idx + 1
+    # data_for_analyse = data_for_analyse[:300]
         
     if number_of_processes == 0:
 
