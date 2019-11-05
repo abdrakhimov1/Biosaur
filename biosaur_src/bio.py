@@ -2,7 +2,6 @@ from . import funcs
 from . import classes
 import time
 
-
 def process_files(args):
     start_time = time.time()
     print('Starting program...')
