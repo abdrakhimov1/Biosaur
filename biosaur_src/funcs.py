@@ -61,7 +61,31 @@ def data_to_features(input_file, max_diff, min_length):
     # idx = working_area['intensity array'] >= 1
     # working_area['m/z array'] = working_area['m/z array'][idx]
     # working_area['intensity array'] = working_area['intensity array'][idx]
-    
+        
+    # print(len(input_file[0]['m/z array']))
+    if 'mean inverse reduced ion mobility array' in input_file[0]:
+        for idx, i in enumerate(input_file):
+            # print(idx, len(i['m/z array']))
+            peak_ion_mobility_object = False
+            for mz, intensity, ion_mobility in zip(i['m/z array'], i['intensity array'], i['mean inverse reduced ion mobility array']):
+                if intensity >= 300:
+                    if not peak_ion_mobility_object:
+                        peak_ion_mobility_object = classes.peak_ion_mobility(mz, intensity, ion_mobility)
+                    else:
+                        peak_ion_mobility_object.push_me_to_the_peak(mz, intensity, ion_mobility, max_diff)
+            input_file[idx]['m/z array'] = np.array(peak_ion_mobility_object.mz_array)
+            input_file[idx]['intensity array'] = np.array(peak_ion_mobility_object.intensity_max)
+            input_file[idx]['mean inverse reduced ion mobility array'] = np.array(peak_ion_mobility_object.ion_mobility_opt)
+        # if idx > 10:
+        #     break
+    # print(len(peak_ion_mobility_object.mz_array))
+    # print(len(i['m/z array']))
+    # print(len(input_file[0]['m/z array']))
+
+    # print(input_file[0]['m/z array'])
+    # print(input_file[0]['intensity array'])
+    # print('HERE')
+
     RT_dict = dict()
 
     
@@ -73,11 +97,11 @@ def data_to_features(input_file, max_diff, min_length):
     for i in input_file:
         #print(i)
         if k == 0:
-            peak1 = classes.peak(i['m/z array'], i['intensity array'], i['index'], i['index'])
+            peak1 = classes.peak(i['m/z array'], i['intensity array'], i['index'], i['index'], i.get('mean inverse reduced ion mobility array', None))
             RT_dict[i['index']] = float(i['scanList']['scan'][0]['scan start time'])
     
         if k > 0:
-            next_peak_i = classes.next_peak(i['m/z array'], i['intensity array'], i['index'])
+            next_peak_i = classes.next_peak(i['m/z array'], i['intensity array'], i['index'], i.get('mean inverse reduced ion mobility array', None))
             peak1.push_me_to_the_peak(next_peak_i, max_diff, min_length)
             RT_dict[i['index']] = float(i['scanList']['scan'][0]['scan start time'])
         #if k > 10:
@@ -470,7 +494,8 @@ def boosting_firststep_with_processes(number_of_processes, input_mzml_path, mass
     data_for_analyse = list(z for z in mzml.read(input_mzml_path) if z['ms level'] == 1)
     for idx, v in enumerate(data_for_analyse):
         v['index'] = idx + 1
-    # data_for_analyse = data_for_analyse[:300]
+    print(len(data_for_analyse))
+    # data_for_analyse = data_for_analyse[:2500]
         
     if number_of_processes == 0:
 
