@@ -61,7 +61,31 @@ def data_to_features(input_file, max_diff, min_length):
     # idx = working_area['intensity array'] >= 1
     # working_area['m/z array'] = working_area['m/z array'][idx]
     # working_area['intensity array'] = working_area['intensity array'][idx]
-    
+        
+    # print(len(input_file[0]['m/z array']))
+    if 'mean inverse reduced ion mobility array' in input_file[0]:
+        for idx, i in enumerate(input_file):
+            # print(idx, len(i['m/z array']))
+            peak_ion_mobility_object = False
+            for mz, intensity, ion_mobility in zip(i['m/z array'], i['intensity array'], i['mean inverse reduced ion mobility array']):
+                if intensity >= 300:
+                    if not peak_ion_mobility_object:
+                        peak_ion_mobility_object = classes.peak_ion_mobility(mz, intensity, ion_mobility)
+                    else:
+                        peak_ion_mobility_object.push_me_to_the_peak(mz, intensity, ion_mobility, max_diff)
+            input_file[idx]['m/z array'] = np.array(peak_ion_mobility_object.mz_array)
+            input_file[idx]['intensity array'] = np.array(peak_ion_mobility_object.intensity_max)
+            input_file[idx]['mean inverse reduced ion mobility array'] = np.array(peak_ion_mobility_object.ion_mobility_opt)
+        # if idx > 10:
+        #     break
+    # print(len(peak_ion_mobility_object.mz_array))
+    # print(len(i['m/z array']))
+    # print(len(input_file[0]['m/z array']))
+
+    # print(input_file[0]['m/z array'])
+    # print(input_file[0]['intensity array'])
+    # print('HERE')
+
     RT_dict = dict()
 
     
@@ -73,11 +97,11 @@ def data_to_features(input_file, max_diff, min_length):
     for i in input_file:
         #print(i)
         if k == 0:
-            peak1 = classes.peak(i['m/z array'], i['intensity array'], i['index'], i['index'])
+            peak1 = classes.peak(i['m/z array'], i['intensity array'], i['index'], i['index'], i.get('mean inverse reduced ion mobility array', None))
             RT_dict[i['index']] = float(i['scanList']['scan'][0]['scan start time'])
     
         if k > 0:
-            next_peak_i = classes.next_peak(i['m/z array'], i['intensity array'], i['index'])
+            next_peak_i = classes.next_peak(i['m/z array'], i['intensity array'], i['index'], i.get('mean inverse reduced ion mobility array', None))
             peak1.push_me_to_the_peak(next_peak_i, max_diff, min_length)
             RT_dict[i['index']] = float(i['scanList']['scan'][0]['scan start time'])
         #if k > 10:
@@ -136,8 +160,9 @@ def cos_correlation_new(theoretical_list, experimental_list, shf):
 
 def cos_correlation_fill_zeroes(hill_1, hill_2):
 
-    common_set = set(hill_1.scan_id + hill_2.scan_id)
-    
+    # common_set = set(hill_1.scan_id + hill_2.scan_id)
+    common_set = hill_1.scan_set.union(hill_2.scan_set)
+
     top = 0
     bot_h1 = 0
     bot_h2 = 0
@@ -323,8 +348,9 @@ def iter_hills(peak, min_charge, max_charge, min_intensity, mass_acc, start_inde
                                 break
                                 # print(cos_correlation_fill_zeroes(peak.finished_hills[i], peak.finished_hills[j]))
                             if abs(diff) <= mz_tol:
-                                if 1 or (left_border_i - 1 <= left_border_j and right_border_i + 1 >= right_border_j) or \
-                                    (left_border_j - 1 <= left_border_i and right_border_j + 1 >= right_border_i):
+                                # if 1 or (left_border_i - 1 <= left_border_j and right_border_i + 1 >= right_border_j) or \
+                                #     (left_border_j - 1 <= left_border_i and right_border_j + 1 >= right_border_i):
+                                if len(peak.finished_hills[i].scan_set.intersection(peak.finished_hills[j].scan_set)):
 
                                     # if abs(middle_index_i - middle_index_j) <= max(1, 0.5 *max(j_len, i_len)):
                                     if cos_correlation_fill_zeroes(peak.finished_hills[i], peak.finished_hills[j]) >= 0.7:
@@ -468,6 +494,8 @@ def boosting_firststep_with_processes(number_of_processes, input_mzml_path, mass
     data_for_analyse = list(z for z in mzml.read(input_mzml_path) if z['ms level'] == 1)
     for idx, v in enumerate(data_for_analyse):
         v['index'] = idx + 1
+    print(len(data_for_analyse))
+    # data_for_analyse = data_for_analyse[:2500]
         
     if number_of_processes == 0:
 

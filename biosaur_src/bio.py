@@ -17,7 +17,7 @@ def process_files(args):
     input_mzml_path = args['input_mzml_path'][0]
     number_of_processes = int(args['number_of_processes'])
     mass_accuracy = args['mass_accuracy']
-    min_length = args['min_length']
+    min_length = int(args['min_length'])
     min_charge = args['min_charge']
     max_charge = args['max_charge']
     min_intensity = args['min_intensity']
@@ -38,10 +38,12 @@ def process_files(args):
 
     #test_peak.crosslink(mass_accuracy)
     #test_peak.cutting_down(0.5)
-
+    print(len(test_peak.finished_hills))
     test_peak.crosslink_simple(mass_accuracy)
+    print("Timer: " + str(round((time.time() - start_time) / 60, 1)) + " minutes.")
     test_peak.split_peaks(hillValleyFactor)
-    test_peak.split_peaks(hillValleyFactor)
+    print("Timer: " + str(round((time.time() - start_time) / 60, 1)) + " minutes.")
+    # test_peak.split_peaks(hillValleyFactor)
 
     test_peak.sort_finished_hills()
 
@@ -71,14 +73,14 @@ def process_files(args):
     print("Timer: " + str(round((features_time - start_time)/60, 1)) + " minutes.")
 
     out_file = open(output_file, 'w')
-    out_file.write('massCalib\trtApex\tintensityApex\tcharge\tnIsotopes\tnScans\tsulfur\n')
+    out_file.write('massCalib\trtApex\tintensityApex\tcharge\tnIsotopes\tnScans\tsulfur\tion_mobility\n')
 
     # output = open('step3.pkl', 'wb')
     # pickle.dump(features, output)
     # output.close()
 
     for x in features:
-        out_file.write('\t'.join([str(z) for z in [x.neutral_mass, test_RT_dict[x.scan_id], x.intensity, x.charge, x.isotopes_numb + 1, x.scan_numb, x.sulfur]]) + '\n')
+        out_file.write('\t'.join([str(z) for z in [x.neutral_mass, test_RT_dict[x.scan_id], x.intensity, x.charge, x.isotopes_numb + 1, x.scan_numb, x.sulfur, (x.ion_mobility if not (x.ion_mobility is None) else 0)]]) + '\n')
     out_file.close()
 
     total_time = time.time()
