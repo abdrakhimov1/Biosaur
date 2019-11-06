@@ -85,6 +85,16 @@ def process_files(args):
         \tnScans\
         \tsulfur\
         \tion_mobility\
+        \tcos_corr_1\
+        \tcos_corr_2\
+        \tdiff_for_output\
+        \tcorr_fill_zero\
+        \tintensity_1\
+        \tscan_id_1\
+        \tmz_std_1\
+        \tintensity_2\
+        \tscan_id_2\
+        \tmz_std_2\
         \n')
 
     # output = open('step3.pkl', 'wb')
@@ -99,6 +109,16 @@ def process_files(args):
                                                    x.isotopes_numb + 1,
                                                    x.scan_numb,
                                                    x.sulfur,
+                                                   x.cos_corr,
+                                                   x.cos_corr_2,
+                                                   x.diff_for_output,
+                                                   x.corr_fill_zero,
+                                                   x.intensity_1,
+                                                   x.scan_id_1,
+                                                   x.mz_std_1,
+                                                   x.intensity_2,
+                                                   x.scan_id_2,
+                                                   x.mz_std_2,
                                                    (
                                                        x.ion_mobility if not
                                                        (x.ion_mobility is None)

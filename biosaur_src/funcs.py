@@ -327,6 +327,8 @@ def iter_hills(
                             # j_len = peak.finished_hills[j].scan_len
 
                             diff = peak_2_mz - m_to_check
+                            if numb == 1:
+                                diff_for_output = diff / peak_2_mz
 
                             if diff > mz_tol:
                                 # print(k)
@@ -341,9 +343,12 @@ def iter_hills(
 
                                     # if abs(middle_index_i - middle_index_j)
                                     # <= max(1, 0.5 *max(j_len, i_len)):
-                                    if cos_correlation_fill_zeroes(
-                                            peak.finished_hills[i],
-                                            peak.finished_hills[j]) >= 0.7:
+
+                                    cos_cor_test = cos_correlation_fill_zeroes(
+                                                        peak.finished_hills[i],
+                                                        peak.finished_hills[j])
+
+                                    if cos_cor_test >= 0.7:
 
                                         if len(candidates) < numb:
 
@@ -410,6 +415,7 @@ def iter_hills(
                                         # if abs(middle_index_i -
                                         # middle_index_j) <= max(1, 0.5
                                         # *max(j_len, i_len)):
+
                                         if cos_correlation_fill_zeroes(
                                                 peak.finished_hills[i],
                                                 peak.finished_hills[j]) >= 0.7:
@@ -468,6 +474,10 @@ def iter_hills(
                     shift) = checking_cos_correlation_for_carbon(
                     all_theoretical_int, all_exp_intensity, 0.6)
 
+                cos_corr_for_output = cos_correlation(
+                                        all_theoretical_int[0:1],
+                                        all_exp_intensity[0:1])
+
                 if cos_corr:  # прикрутить изменение параметра 0.6
 
                     # print(shift)
@@ -475,7 +485,25 @@ def iter_hills(
                     candidates = candidates[:number_of_passed_isotopes]
 
                     # добавить s_candidates
-                    ready.append([i, candidates, [], shift])
+                    j2 = candidates[0][0]
+                    scan_id_2 = peak.finished_hills[j2].scan_id
+                    mz_std_2 = peak.finished_hills[j2].mz_std
+                    intensity_2 = peak.finished_hills[j2].intensity
+                    ready.append([
+                        i,
+                        candidates,
+                        [],
+                        shift,
+                        [cos_corr,
+                            cos_corr_for_output,
+                            cos_cor_test,
+                            diff_for_output,
+                            peak.finished_hills[i].intensity,
+                            peak.finished_hills[i].scan_id,
+                            peak.finished_hills[i].mz_std,
+                            scan_id_2,
+                            mz_std_2,
+                            intensity_2]])
 
                     ready_set.add(i)
                     for i in candidates:
