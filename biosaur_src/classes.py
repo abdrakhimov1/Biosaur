@@ -20,6 +20,7 @@ class ready_hill:
         self.scan_id = scan_id
         self.scan_set = set(scan_id)
         self.mass = mass
+        self.diff_for_output = 0
         tmp = max(range(len(self.intensity)), key=self.intensity.__getitem__)
         self.scan_of_max_intensity = self.scan_id[tmp]
         self.max_intensity = self.intensity[tmp]
@@ -155,6 +156,7 @@ class peak:
         self.crosslinked_hills = []
 
         self.intervals = [start_id, ]
+        self.actual_degree = 0
 
     def concat_peak_with(self, second_peak):
 
@@ -600,3 +602,13 @@ class feature:
         # self.scan_id = finished_hills[each[0]]
         self.RT = self.scan_numb
         self.sulfur = (1 if each[2] else 0)
+        self.cos_corr = each[4][0]
+        self.cos_corr_2 = each[4][1]
+        self.corr_fill_zero = each[4][2]
+        self.diff_for_output = each[4][3]
+        self.intensity_1 = each[4][4]
+        self.scan_id_1 = each[4][5]
+        self.mz_std_1 = each[4][6]
+        self.intensity_2 = each[4][7]
+        self.scan_id_2 = each[4][8]
+        self.mz_std_2 = each[4][9]
