@@ -388,7 +388,7 @@ def iter_hills(
 
                         for j in range(ks + 1, size, 1):
 
-                            if j not in ready_set:
+                            if j not in ready_set and j != candidates[-1][0]:
                                 peak_2_mz = peak.finished_hills[j].mz
                                 left_border_j = (
                                     peak.finished_hills[j]

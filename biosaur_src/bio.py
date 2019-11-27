@@ -94,6 +94,9 @@ def process_files(args):
         \tintensity_2\
         \tscan_id_2\
         \tmz_std_2\
+        \tmz\
+        \trtStart\
+        \trtEnd\
         \tion_mobility\
         \n')
 
@@ -119,6 +122,9 @@ def process_files(args):
                                                    x.intensity_2,
                                                    x.scan_id_2,
                                                    x.mz_std_2,
+                                                   x.mz,
+                                                   test_RT_dict[x.scans[0]],
+                                                   test_RT_dict[x.scans[-1]],
                                                    (
                                                        x.ion_mobility if not
                                                        (x.ion_mobility is None)

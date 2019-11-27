@@ -589,7 +589,7 @@ class feature:
         self.isotopes_numb = len(each[1])
 
         self.scan_numb = len(finished_hills[each[0]].scan_id)
-
+        self.scans = finished_hills[each[0]].scan_id
         self.id_for_scan = finished_hills[each[0]].intensity.index(
             max(finished_hills[each[0]].intensity))
         self.intensity = finished_hills[each[0]].max_intensity
