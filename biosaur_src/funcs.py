@@ -501,9 +501,9 @@ def iter_hills(
                             peak.finished_hills[i].intensity,
                             peak.finished_hills[i].scan_id,
                             peak.finished_hills[i].mz_std,
+                            intensity_2,
                             scan_id_2,
-                            mz_std_2,
-                            intensity_2]])
+                            mz_std_2]])
 
                     ready_set.add(i)
                     for i in candidates:
