@@ -9,7 +9,7 @@ def process_files(args):
     input_mzml_path = args['input_mzml_path'][0]
     number_of_processes = int(args['number_of_processes'])
     mass_accuracy = args['mass_accuracy']
-    min_length = int(args['min_length'])
+    min_length = args['min_length']
     min_charge = args['min_charge']
     max_charge = args['max_charge']
     min_intensity = args['min_intensity']
