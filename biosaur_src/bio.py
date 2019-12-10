@@ -51,7 +51,6 @@ def process_files(args):
 \tFAIMS\
 \n')
 
-
     out_file.close()
 
     if not args['faims']:
@@ -67,13 +66,15 @@ def process_files(args):
             else:
                 break
         print('Detected FAIMS values: ', faims_set)
+
+    data_start_index = 0
+
     for faims_val in faims_set:
 
         if faims_val is None:
             data_for_analyse_tmp = data_for_analyse
             faims_val = 0
         else:
-            data_start_index = 0
             data_for_analyse_tmp = []
             for z in data_for_analyse:
                 if z['FAIMS compensation voltage'] == faims_val:
