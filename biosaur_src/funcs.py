@@ -1,5 +1,4 @@
 from . import classes
-from pyteomics import mzml
 import numpy as np
 from scipy.stats import binom
 import math
@@ -541,16 +540,13 @@ def worker_data_to_features(
 
 def boosting_firststep_with_processes(
         number_of_processes,
-        input_mzml_path,
+        data_for_analyse,
         mass_accuracy,
-        min_length):
+        min_length,
+        data_start_index=0):
 
-    data_for_analyse = list(z for z in mzml.read(
-        input_mzml_path) if z['ms level'] == 1)
     for idx, v in enumerate(data_for_analyse):
-        v['index'] = idx + 1
-    print(len(data_for_analyse))
-    # data_for_analyse = data_for_analyse[:2500]
+        v['index'] = idx + 1 + data_start_index
 
     if number_of_processes == 0:
 
