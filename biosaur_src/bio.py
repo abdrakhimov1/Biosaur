@@ -27,30 +27,30 @@ def process_files(args):
     print(len(data_for_analyse))
 
     out_file = open(output_file, 'w')
-    out_file.write(
-        'massCalib\
-        \trtApex\
-        \tintensityApex\
-        \tcharge\
-        \tnIsotopes\
-        \tnScans\
-        \tsulfur\
-        \tcos_corr_1\
-        \tcos_corr_2\
-        \tdiff_for_output\
-        \tcorr_fill_zero\
-        \tintensity_1\
-        \tscan_id_1\
-        \tmz_std_1\
-        \tintensity_2\
-        \tscan_id_2\
-        \tmz_std_2\
-        \tmz\
-        \trtStart\
-        \trtEnd\
-        \tion_mobility\
-        \tFAIMS\
-        \n')
+    out_file.write('massCalib\
+\trtApex\
+\tintensityApex\
+\tcharge\
+\tnIsotopes\
+\tnScans\
+\tsulfur\
+\tcos_corr_1\
+\tcos_corr_2\
+\tdiff_for_output\
+\tcorr_fill_zero\
+\tintensity_1\
+\tscan_id_1\
+\tmz_std_1\
+\tintensity_2\
+\tscan_id_2\
+\tmz_std_2\
+\tmz\
+\trtStart\
+\trtEnd\
+\tion_mobility\
+\tFAIMS\
+\n')
+
 
     out_file.close()
 
