@@ -369,8 +369,7 @@ def iter_hills(
                                                     .mz) -
                                                     peak.finished_hills[i].mz):
                                                 candidates[-1] = (j, charge)
-                    if len(candidates) < numb:
-                        break
+                    
                     # lc = len(candidates)
                     # if lc < numb:
                     #     if lc and candidates[-1][1] != 0:
@@ -448,6 +447,9 @@ def iter_hills(
 
                                                 pass
 
+                    if len(candidates) < numb:
+                            break
+                
                 if len(candidates) > 0:  # FIXME
 
                     break

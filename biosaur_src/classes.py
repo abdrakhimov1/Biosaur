@@ -341,8 +341,7 @@ class peak:
         return np.argmin(np.abs(self.mz_array[mask] - value))
 
     def newid(self, nearest, mask):
-        cnt2 = nearest - 1 - sum(mask[:nearest - 1])
-        return cnt2 + nearest
+        return np.nonzero(mask)[0][nearest]
 
     def get_nearest_id(self, i, prev_nearest, diff, mz_array_l, ion_mobility):
         mass_diff = diff * 1e-6 * i
@@ -450,18 +449,19 @@ class peak:
                 if tmp1_diff_arr.size == 0:
                     break
 
-                if tmp1_idx_arr[0] in saved_index:
+                if tmp1_nearest_id_arr[0] in saved_index:
 
                     for idx, element in enumerate(tmp1_idx_arr):
 
-                        if element in saved_index:
+                        if tmp1_nearest_id_arr[idx] in saved_index:
 
-                            nearest = self.get_nearest_value(element, mask)
+                            element_mz = next_mz_array[element]
+                            nearest = self.get_nearest_value(element_mz, mask)
                             nearest_id = self.newid(nearest, mask)
                             tmp1_nearest_id_arr[idx] = nearest_id
 
                             tmp1_diff_arr[idx] = abs(
-                                self.mz_array[nearest_id] - element) / element
+                                self.mz_array[nearest_id] - element_mz) / element_mz
                         else:
                             break
                     sort_list = np.argsort(

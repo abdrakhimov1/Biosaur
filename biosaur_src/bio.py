@@ -84,7 +84,6 @@ def process_files(args):
         \tnIsotopes\
         \tnScans\
         \tsulfur\
-        \tion_mobility\
         \tcos_corr_1\
         \tcos_corr_2\
         \tdiff_for_output\
@@ -98,6 +97,7 @@ def process_files(args):
         \tmz\
         \trtStart\
         \trtEnd\
+        \tion_mobility\
         \n')
 
     # output = open('step3.pkl', 'wb')
