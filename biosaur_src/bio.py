@@ -1,8 +1,8 @@
-from . import funcs
-from . import classes
 import time
 from os import path
 from pyteomics import mzml
+from . import funcs
+from . import classes
 
 
 def process_files(args):
@@ -18,13 +18,13 @@ def process_files(args):
     if args['output_file']:
         output_file = args['output_file']
     else:
-        output_file = path.splitext(input_mzml_path)[0] + path.extsep + 'features.tsv'
+        output_file = path.splitext(input_mzml_path)[0]\
+             + path.extsep + 'features.tsv'
     hillValleyFactor = args['hill_valley_factor']
 
     data_for_analyse = list(z for z in mzml.read(
-        input_mzml_path) if z['ms level'] == 1)# and z['FAIMS compensation voltage'] == -80.0)
+        input_mzml_path) if z['ms level'] == 1)
     print(len(data_for_analyse))
-
 
     out_file = open(output_file, 'w')
     out_file.write(
@@ -57,7 +57,8 @@ def process_files(args):
     if not args['faims']:
         faims_set = set([None, ])
         if 'FAIMS compensation voltage' in data_for_analyse[0]:
-            print('\nWARNING: FAIMS detected in data, but option --faims was not enabled!\n')
+            print('\nWARNING: FAIMS detected in data,\
+                 but option --faims was not enabled!\n')
     else:
         faims_set = set()
         for z in data_for_analyse:
@@ -79,7 +80,8 @@ def process_files(args):
                     data_for_analyse_tmp.append(z)
 
         test_peak, test_RT_dict = funcs.boosting_firststep_with_processes(
-            number_of_processes, data_for_analyse_tmp, mass_accuracy, min_length, data_start_index=data_start_index)
+            number_of_processes, data_for_analyse_tmp, mass_accuracy,
+            min_length, data_start_index=data_start_index)
 
         data_start_index += len(data_for_analyse_tmp)
 
@@ -89,7 +91,8 @@ def process_files(args):
 
         print(
             "Timer: " +
-            str(round((data_to_features_time - start_time) / 60, 1)) + " minutes.")
+            str(round((data_to_features_time - start_time) / 60, 1))
+            + " minutes.")
 
         # test_peak.crosslink(mass_accuracy)
         # test_peak.cutting_down(0.5)
@@ -139,35 +142,34 @@ def process_files(args):
             "Timer: " +
             str(round((features_time - start_time) / 60, 1)) + " minutes.")
 
-
         out_file = open(output_file, 'a')
         for x in features:
-            out_file.write('\t'.join([str(z) for z in [x.neutral_mass,
-                                                    test_RT_dict[x.scan_id],
-                                                    x.intensity,
-                                                    x.charge,
-                                                    x.isotopes_numb + 1,
-                                                    x.scan_numb,
-                                                    x.sulfur,
-                                                    x.cos_corr,
-                                                    x.cos_corr_2,
-                                                    x.diff_for_output,
-                                                    x.corr_fill_zero,
-                                                    x.intensity_1,
-                                                    x.scan_id_1,
-                                                    x.mz_std_1,
-                                                    x.intensity_2,
-                                                    x.scan_id_2,
-                                                    x.mz_std_2,
-                                                    x.mz,
-                                                    test_RT_dict[x.scans[0]],
-                                                    test_RT_dict[x.scans[-1]],
-                                                    (
-                                                        x.ion_mobility if not
-                                                        (x.ion_mobility is None)
-                                                        else 0),
-                                                    faims_val,                                                        
-                                                    ]]) + '\n')
+            out_file.write('\t'.join([str(z) for z in [
+                x.neutral_mass,
+                test_RT_dict[x.scan_id],
+                x.intensity,
+                x.charge,
+                x.isotopes_numb + 1,
+                x.scan_numb,
+                x.sulfur,
+                x.cos_corr,
+                x.cos_corr_2,
+                x.diff_for_output,
+                x.corr_fill_zero,
+                x.intensity_1,
+                x.scan_id_1,
+                x.mz_std_1,
+                x.intensity_2,
+                x.scan_id_2,
+                x.mz_std_2,
+                x.mz,
+                test_RT_dict[x.scans[0]],
+                test_RT_dict[x.scans[-1]],
+                (
+                    x.ion_mobility if not
+                    (x.ion_mobility is None)
+                    else 0),
+                faims_val]]) + '\n')
         out_file.close()
 
         total_time = time.time()

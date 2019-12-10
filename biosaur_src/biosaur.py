@@ -65,14 +65,12 @@ def run():
     parser.add_argument(
         '-out',
         '--output_file',
-        help='Output File')#,
-        # default='test_custom.features.tsv')
+        help='Output File')
     parser.add_argument(
         '-faims',
         '--faims',
         help='Use when mzML contain FAIMS data',
         action='store_true')
-        # default='test_custom.features.tsv')
     args = vars(parser.parse_args())
 
     logging.basicConfig(format='%(levelname)9s: %(asctime)s %(message)s',
