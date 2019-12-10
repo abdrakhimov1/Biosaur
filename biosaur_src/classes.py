@@ -461,7 +461,8 @@ class peak:
                             tmp1_nearest_id_arr[idx] = nearest_id
 
                             tmp1_diff_arr[idx] = abs(
-                                self.mz_array[nearest_id] - element_mz) / element_mz
+                                self.mz_array[nearest_id] - element_mz) / \
+                                element_mz
                         else:
                             break
                     sort_list = np.argsort(
