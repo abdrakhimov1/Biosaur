@@ -76,29 +76,28 @@ def process_files(args):
         str(round((features_time - start_time) / 60, 1)) + " minutes.")
 
     out_file = open(output_file, 'w')
-    out_file.write(
-        'massCalib\
-        \trtApex\
-        \tintensityApex\
-        \tcharge\
-        \tnIsotopes\
-        \tnScans\
-        \tsulfur\
-        \tcos_corr_1\
-        \tcos_corr_2\
-        \tdiff_for_output\
-        \tcorr_fill_zero\
-        \tintensity_1\
-        \tscan_id_1\
-        \tmz_std_1\
-        \tintensity_2\
-        \tscan_id_2\
-        \tmz_std_2\
-        \tmz\
-        \trtStart\
-        \trtEnd\
-        \tion_mobility\
-        \n')
+    out_file.write('massCalib\
+\trtApex\
+\tintensityApex\
+\tcharge\
+\tnIsotopes\
+\tnScans\
+\tsulfur\
+\tcos_corr_1\
+\tcos_corr_2\
+\tdiff_for_output\
+\tcorr_fill_zero\
+\tintensity_1\
+\tscan_id_1\
+\tmz_std_1\
+\tintensity_2\
+\tscan_id_2\
+\tmz_std_2\
+\tmz\
+\trtStart\
+\trtEnd\
+\tion_mobility\
+\n')
 
     # output = open('step3.pkl', 'wb')
     # pickle.dump(features, output)
