@@ -26,31 +26,37 @@ def run():
         '-ac',
         '--mass_accuracy',
         help='Mass accuracy',
+        type=float,
         default=8)
     parser.add_argument(
         '-minc',
         '--min_charge',
         help='Minimum charge',
+        type=int,
         default=1)
     parser.add_argument(
         '-maxc',
         '--max_charge',
         help='Maximum charge',
+        type=int,
         default=6)
     parser.add_argument(
         '-minl',
         '--min_length',
         help='Minimum length',
+        type=int,
         default=3)
     parser.add_argument(
         '-mini',
         '--min_intensity',
+        type=float,
         help='Minimum intensity',
         default=1)
     parser.add_argument(
         '-hvf',
         '--hill_valley_factor',
         help='Hill Valley Factor',
+        type=float,
         default=0.8)
     parser.add_argument(
         '--debug',
@@ -59,8 +65,12 @@ def run():
     parser.add_argument(
         '-out',
         '--output_file',
-        help='Output File',
-        default='test_custom.features.tsv')
+        help='Output File')
+    parser.add_argument(
+        '-faims',
+        '--faims',
+        help='Use when mzML contain FAIMS data',
+        action='store_true')
     args = vars(parser.parse_args())
 
     logging.basicConfig(format='%(levelname)9s: %(asctime)s %(message)s',
