@@ -3,6 +3,9 @@ import numpy as np
 from scipy.stats import binom
 import math
 from multiprocessing import Queue, Process, cpu_count
+import logging
+logging.basicConfig(format=u'%(filename)s[LINE:%(lineno)d]#\
+%(levelname)-8s [%(asctime)s] %(message)s', level=logging.DEBUG)
 
 
 def check_its_ready(id_real, peak, check_degree):
@@ -22,7 +25,7 @@ def check_its_ready(id_real, peak, check_degree):
             peak.finished_hills.append(tmp_ready_hill)
 
 
-def data_to_features(input_file, max_diff, min_length):
+def data_to_features(input_file, max_diff, min_length, proccess_number):
 
     # data = mzml.read(input_file)
 
@@ -103,7 +106,9 @@ def data_to_features(input_file, max_diff, min_length):
         k += 1
     # print(peak1.mz_array)
     peak1.push_left(min_length=min_length)
-
+    logging.info(
+        u'Data converted to features with process /' +
+        str(proccess_number + 1) + '/ --->')
     # print(peak1.mz_array)
     return peak1, RT_dict
 
@@ -228,7 +233,8 @@ def iter_hills(
         min_intensity,
         mass_acc,
         start_index,
-        end_index):
+        end_index,
+        proccess_number):
 
     ready = []
     averagine_mass = 111.1254
@@ -519,7 +525,9 @@ def iter_hills(
 
                         for i in s_candidates:
                             ready_set.add(i[0])
-
+    logging.info(
+        u'All hills were iterated correctly with this process /' +
+        str(proccess_number + 1) + '/ -->')
     return ready
 
 
@@ -529,10 +537,14 @@ def worker_data_to_features(
         start_index,
         end_index,
         mass_accuracy,
-        min_length):
+        min_length, proccess_number):
 
     result_peak, result_RT_dict = data_to_features(
-        data_for_analyse[start_index:end_index], mass_accuracy, min_length)
+        data_for_analyse[start_index:end_index],
+        mass_accuracy,
+        min_length,
+        proccess_number
+        )
 
     if result_peak:
         qout.put((result_peak, result_RT_dict))
@@ -585,7 +597,7 @@ def boosting_firststep_with_processes(
                     start_index,
                     step + start_index,
                     mass_accuracy,
-                    min_length))
+                    min_length, i))
             # print(start_index)
             p.start()
             procs.append(p)
@@ -621,7 +633,9 @@ def worker_iter_hills(
         min_charge,
         max_charge,
         min_intensity,
-        mass_accuracy):
+        mass_accuracy,
+        proccess_number
+        ):
 
     result_q = iter_hills(
         peak,
@@ -630,7 +644,8 @@ def worker_iter_hills(
         min_intensity,
         mass_accuracy,
         start_index,
-        end_index)
+        end_index,
+        proccess_number)
 
     if result_q:
         qout.put(result_q)
@@ -684,7 +699,8 @@ def boosting_secondstep_with_processes(
                     min_charge,
                     max_charge,
                     min_intensity,
-                    mass_accuracy))
+                    mass_accuracy,
+                    i))
             # print(start_index)
             p.start()
             procs.append(p)
