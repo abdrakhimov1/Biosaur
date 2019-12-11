@@ -3,11 +3,14 @@ from os import path
 from pyteomics import mzml
 from . import funcs
 from . import classes
+import logging
+logging.basicConfig(format=u'%(filename)s[LINE:%(lineno)d]#\
+%(levelname)-8s [%(asctime)s]  %(message)s', level=logging.DEBUG)
 
 
 def process_files(args):
     start_time = time.time()
-    print('Starting program...')
+    logging.info(u'Reading scans...')
     input_mzml_path = args['input_mzml_path'][0]
     number_of_processes = int(args['number_of_processes'])
     mass_accuracy = args['mass_accuracy']
@@ -24,7 +27,12 @@ def process_files(args):
 
     data_for_analyse = list(z for z in mzml.read(
         input_mzml_path) if z['ms level'] == 1)
-    print(len(data_for_analyse))
+    logging.info(u'Number of MS1 scans: ' + str(len(data_for_analyse)))
+    tmp_str = 'maximum amount of'
+    logging.info(
+        u'Converting your data, using ' +
+        str(number_of_processes if number_of_processes != 0 else tmp_str) +
+        ' processes...')
 
     out_file = open(output_file, 'w')
     out_file.write('massCalib\
@@ -56,8 +64,9 @@ def process_files(args):
     if not args['faims']:
         faims_set = set([None, ])
         if 'FAIMS compensation voltage' in data_for_analyse[0]:
-            print('\nWARNING: FAIMS detected in data,\
+            logging.warning(u'\nWARNING: FAIMS detected in data,\
                  but option --faims was not enabled!\n')
+
     else:
         faims_set = set()
         for z in data_for_analyse:
@@ -65,7 +74,7 @@ def process_files(args):
                 faims_set.add(z['FAIMS compensation voltage'])
             else:
                 break
-        print('Detected FAIMS values: ', faims_set)
+        logging.info(u'Detected FAIMS values: ', faims_set)
 
     data_start_index = 0
 
@@ -88,24 +97,30 @@ def process_files(args):
 
         # funcs.cutting_filter_on(test_peak)
 
-        data_to_features_time = time.time()
-
-        print(
-            "Timer: " +
-            str(round((data_to_features_time - start_time) / 60, 1))
-            + " minutes.")
+        # print(
+        #     "Timer: " +
+        #     str(round((data_to_features_time - start_time) / 60, 1))
+        #     + " minutes.")
 
         # test_peak.crosslink(mass_accuracy)
         # test_peak.cutting_down(0.5)
-        print(len(test_peak.finished_hills))
+        logging.info(u'All data converted to hills...')
+        logging.info(
+            str(len(test_peak.finished_hills)) +
+            u' hills were detected...')
+        logging.info('Processing hills...')
+        logging.info(
+            'Your hills proccesing with ' +
+            str(number_of_processes if number_of_processes != 0 else tmp_str) +
+            ' processes...')
         test_peak.crosslink_simple(mass_accuracy)
-        print(
-            "Timer: " +
-            str(round((time.time() - start_time) / 60, 1)) + " minutes.")
+        # print(
+        #     "Timer: " +
+        #     str(round((time.time() - start_time) / 60, 1)) + " minutes.")
         test_peak.split_peaks(hillValleyFactor)
-        print(
-            "Timer: " +
-            str(round((time.time() - start_time) / 60, 1)) + " minutes.")
+        # print(
+        #     "Timer: " +
+        #     str(round((time.time() - start_time) / 60, 1)) + " minutes.")
         # test_peak.split_peaks(hillValleyFactor)
 
         test_peak.sort_finished_hills()
@@ -122,26 +137,22 @@ def process_files(args):
             min_intensity,
             mass_accuracy)
         # tmp = funcs.iter_hills(test_peak, 1 , 5, 10, mass_accuracy)
-        iter_hills_time = time.time()
-
         # output = open('second_step.pkl', 'wb')
         # pickle.dump(tmp, output)
         # output.close()
 
-        print(
-            "Timer: " +
-            str(round((iter_hills_time - start_time) / 60, 1)) + " minutes.")
+        # print(
+        #     "Timer: " +
+        #     str(round((iter_hills_time - start_time) / 60, 1)) + " minutes.")
 
         features = []
 
         for each in tmp:
             features.append(classes.feature(test_peak.finished_hills, each))
 
-        features_time = time.time()
-
-        print(
-            "Timer: " +
-            str(round((features_time - start_time) / 60, 1)) + " minutes.")
+        # print(
+        #     "Timer: " +
+        #     str(round((features_time - start_time) / 60, 1)) + " minutes.")
 
         out_file = open(output_file, 'a')
         for x in features:
@@ -174,7 +185,15 @@ def process_files(args):
         out_file.close()
 
         total_time = time.time()
-        print("Ready!")
-        print(
+        print('=========================================================== \n')
+        logging.info("Ready!")
+        logging.info(str(len(features)) + u' features were detected.')
+        logging.info(u'All your features were saved in ' + output_file)
+        # print("Ready!")
+        # print(
+        #     "Total time: " +
+        #     str(round((total_time - start_time) / 60, 1)) + " minutes.")
+        logging.info(
             "Total time: " +
-            str(round((total_time - start_time) / 60, 1)) + " minutes.")
+            str(round((total_time - start_time) / 60, 1)) +
+            " minutes.")

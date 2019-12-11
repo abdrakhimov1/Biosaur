@@ -1,10 +1,39 @@
 from __future__ import division
 import argparse
 import logging
+import json_logging
 from . import bio
+import pyfiglet
+import json
+import coloredlogs
+from termcolor import colored
+
+json_logging.ENABLE_JSON_LOGGING = True
+json_logging.init_non_web()
+coloredlogs.install()
 
 
 def run():
+
+    welcome_message = pyfiglet.figlet_format("Welcome to Meteor", font="slant")
+    print(colored(welcome_message, 'yellow'))
+    print('=========================================================== \n')
+    print(colored(u'Copyright [2019] [ABDRAKHIMOV & IVANOV Inc. \u00a9] \n\
+Licensed under the Apache License, Version 2.0 (the "License"); \n\
+\n\
+you may not use this file except in compliance with the License. \n\
+You may obtain a copy of the License at \n\
+ \n\
+    http://www.apache.org/licenses/LICENSE-2.0 \n\
+ \n\
+Unless required by applicable law or agreed to in writing, software \n\
+distributed under the License is distributed on an "AS IS" BASIS, \n\
+WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied. \n\
+See the License for the specific language governing permissions and \n\
+limitations under the License. \n', 'yellow'))
+    print('=========================================================== \n')
+
+    logging.info(u'Starting program with following params...')
     parser = argparse.ArgumentParser(
         description='Detection of peptide features',
         epilog='''
@@ -72,12 +101,12 @@ def run():
         help='Use when mzML contain FAIMS data',
         action='store_true')
     args = vars(parser.parse_args())
-
+    log_args = json.dumps(args, indent=2, sort_keys=False)
     logging.basicConfig(format='%(levelname)9s: %(asctime)s %(message)s',
                         datefmt='[%H:%M:%S]',
                         level=[logging.INFO, logging.DEBUG][args['debug']])
-    logger = logging.getLogger(__name__)
-    logger.debug('Starting with args: %s', args)
+
+    logging.info('Starting with args: %s', log_args)
     return bio.process_files(args)
 
 
