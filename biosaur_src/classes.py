@@ -578,7 +578,7 @@ class peak:
 
 class feature:
 
-    def __init__(self, finished_hills, each):
+    def __init__(self, finished_hills, each, each_id):
 
         self.charge = each[1][0][1]
         self.shift = each[3]
@@ -594,6 +594,8 @@ class feature:
         self.id_for_scan = finished_hills[each[0]].intensity.index(
             max(finished_hills[each[0]].intensity))
         self.intensity = finished_hills[each[0]].max_intensity
+        self.idict = finished_hills[each[0]].idict
+        self.scan_set = finished_hills[each[0]].scan_set
         if not (finished_hills[each[0]].ion_mobility is None):
             self.ion_mobility = finished_hills[each[0]].opt_ion_mobility
         else:
@@ -613,3 +615,4 @@ class feature:
         self.intensity_2 = each[4][7]
         self.scan_id_2 = each[4][8]
         self.mz_std_2 = each[4][9]
+        self.id = each_id
