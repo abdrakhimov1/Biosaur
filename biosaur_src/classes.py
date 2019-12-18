@@ -37,6 +37,9 @@ class ready_hill:
         for i, j in zip(self.scan_id, self.intensity):
             self.idict[i] = j
 
+        self.sqrt_of_i_sum_squares = math.sqrt(
+            sum(v**2 for v in self.idict.values()))
+
 
 class next_peak:
 
@@ -596,7 +599,8 @@ class feature:
             max(finished_hills[each[0]].intensity))
         self.intensity = finished_hills[each[0]].max_intensity
         self.idict = finished_hills[each[0]].idict
-        self.sqrt_of_i_sum_squares = math.sqrt(sum(v**2 for v in self.idict.values()))
+        self.sqrt_of_i_sum_squares = math.sqrt(
+            sum(v**2 for v in self.idict.values()))
         self.scan_set = finished_hills[each[0]].scan_set
         if not (finished_hills[each[0]].ion_mobility is None):
             self.ion_mobility = finished_hills[each[0]].opt_ion_mobility

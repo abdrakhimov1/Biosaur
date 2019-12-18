@@ -3,7 +3,6 @@ from os import path
 from pyteomics import mzml
 from . import funcs
 from . import classes
-import pandas as pd
 import logging
 logging.basicConfig(format=u'%(filename)s[LINE:%(lineno)d]#\
 %(levelname)-8s [%(asctime)s]  %(message)s', level=logging.DEBUG)
@@ -179,7 +178,11 @@ def process_files(args):
         features = []
 
         for each_id, each in enumerate(tmp):
-            features.append(classes.feature(test_peak.finished_hills, each, each_id))
+            features.append(
+                classes.feature(
+                    test_peak.finished_hills,
+                    each,
+                    each_id))
 
         # print(
         #     "Timer: " +
@@ -250,8 +253,6 @@ def process_files(args):
                         else 0),
                     faims_val]]) + '\n')
             out_file.close()
-        #FIXME
-        # df_for_corr_table = pd.read_table(output_file)
 
         total_time = time.time()
         print('=========================================================== \n')

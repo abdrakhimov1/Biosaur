@@ -158,64 +158,23 @@ def cos_correlation_new(theoretical_list, experimental_list, shf):
 
     return top / bottom, sum(theoretical_list) / theor_total_sum
 
-#FIXME (возможно) считать не по union а по intersection, а знаменатель через numpy.norma 
+
 def cos_correlation_fill_zeroes(hill_1, hill_2):
 
-    # common_set = set(hill_1.scan_id + hill_2.scan_id)
     inter_set = hill_1.scan_set.intersection(hill_2.scan_set)
     if len(inter_set):
 
-        common_set = hill_1.scan_set.union(hill_2.scan_set)
-
         top = 0
-        bot_h1 = 0
-        bot_h2 = 0
         for i in inter_set:
             h1_val = hill_1.idict.get(i, 0)
             h2_val = hill_2.idict.get(i, 0)
             top += h1_val * h2_val
-        for i in common_set:
-            h1_val = hill_1.idict.get(i, 0)
-            h2_val = hill_2.idict.get(i, 0)
-            bot_h1 += h1_val ** 2
-            bot_h2 += h2_val ** 2
-        bottom = math.sqrt(bot_h1) * math.sqrt(bot_h2)
-        # bottom = hill_1.sqrt_of_i_sum_squares * hill_2.sqrt_of_i_sum_squares
-
-        return top / bottom
-    
-    else:
-        return 0
-
-
-#FIXME считать не по union а по intersection, а знаменатель через numpy.norma 
-def cos_correlation_fill_zeroes_for_features(hill_1, hill_2):
-
-    # common_set = set(hill_1.scan_id + hill_2.scan_id)
-    inter_set = hill_1.scan_set.intersection(hill_2.scan_set)
-    if len(inter_set):
-
-        # common_set = hill_1.scan_set.union(hill_2.scan_set)
-
-        top = 0
-        # bot_h1 = 0
-        # bot_h2 = 0
-        for i in inter_set:
-            h1_val = hill_1.idict.get(i, 0)
-            h2_val = hill_2.idict.get(i, 0)
-            top += h1_val * h2_val
-        # for i in common_set:
-        #     h1_val = hill_1.idict.get(i, 0)
-        #     h2_val = hill_2.idict.get(i, 0)
-        #     bot_h1 += h1_val ** 2
-        #     bot_h2 += h2_val ** 2
-        # bottom = math.sqrt(bot_h1) * math.sqrt(bot_h2)
         bottom = hill_1.sqrt_of_i_sum_squares * hill_2.sqrt_of_i_sum_squares
-
         return top / bottom
-    
+
     else:
         return 0
+
 
 def checking_cos_correlation_for_carbon(
         theoretical_list, experimental_list, thresh):
@@ -381,7 +340,7 @@ def iter_hills(
                                 # print(k)
                                 break
                             if abs(diff) <= mz_tol:
-                                
+
                                 cos_cor_test = cos_correlation_fill_zeroes(
                                                     peak.finished_hills[i],
                                                     peak.finished_hills[j])
@@ -758,7 +717,6 @@ def boosting_secondstep_with_processes(
     return result_q
 
 
-#FIXME
 def func_for_correlation_matrix(set_of_features):
 
     logging.info(u'Counting features correlation...')
@@ -771,9 +729,11 @@ def func_for_correlation_matrix(set_of_features):
     while each_id < set_length - 1:
         each_feature = set_of_features[each_id]
         if each_id % 50 == 0:
-            logging.info(u'Calculated ' + str(each_id + 1) + '/' + str(set_length) + ' features.')
-
-        tmp_list = []
+            logging.info(
+                u'Calculated ' +
+                str(each_id + 1) +
+                '/' + str(set_length) +
+                ' features.')
 
         other_id = each_id + 1
         while other_id < set_length:
@@ -781,11 +741,13 @@ def func_for_correlation_matrix(set_of_features):
 
             if other_feature.scans[0] > each_feature.scans[-1]:
                 break
-        # for other_id, other_feature in enumerate(set_of_features[each_id + 1::]):
-            tmp_corr = cos_correlation_fill_zeroes_for_features(each_feature, other_feature)
+
+            tmp_corr = cos_correlation_fill_zeroes(
+                each_feature,
+                other_feature)
             if tmp_corr > 0.5:
-                out_put_dict[each_feature.id] += [{other_feature.id : tmp_corr}]
-                out_put_dict[other_feature.id] += [{each_feature.id : tmp_corr}]
+                out_put_dict[each_feature.id] += [{other_feature.id: tmp_corr}]
+                out_put_dict[other_feature.id] += [{each_feature.id: tmp_corr}]
             other_id += 1
         if each_id == 200:
             pass
@@ -812,16 +774,15 @@ def worker_func_for_correlation_matrix(
 
 
 def boosting_correlation_matrix_with_processes(
-    number_of_processes,
-    set_of_features):
+        number_of_processes, set_of_features):
 
     if number_of_processes == 0:
 
-            try:
-                number_of_processes = cpu_count()
+        try:
+            number_of_processes = cpu_count()
 
-            except NotImplementedError:
-                number_of_processes = 1
+        except NotImplementedError:
+            number_of_processes = 1
 
     if number_of_processes == 1:
 

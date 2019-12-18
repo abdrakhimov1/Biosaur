@@ -15,7 +15,9 @@ coloredlogs.install()
 
 def run():
 
-    welcome_message = pyfiglet.figlet_format("Welcome to Biosaur", font="slant")
+    welcome_message = pyfiglet.figlet_format(
+        "Welcome to Biosaur",
+        font="slant")
     print(colored(welcome_message, 'green'))
     print('=========================================================== \n')
     print(colored(u'Copyright [2019] [ABDRAKHIMOV & IVANOV Inc. \u00a9] \n\
