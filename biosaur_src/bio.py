@@ -188,6 +188,7 @@ def process_files(args):
         out_file = open(output_file, 'a')
 
         if correlation_map:
+            features = sorted(features, key=lambda x: x.scans[0])
             tmp_dict = funcs.func_for_correlation_matrix(features)
             for idx, x in enumerate(features):
                 out_file.write('\t'.join([str(z) for z in [
