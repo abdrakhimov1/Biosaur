@@ -1,6 +1,7 @@
 from copy import copy
 import numpy as np
 from scipy.signal import medfilt
+import math
 
 
 def meanfilt(data, window_width):
@@ -595,6 +596,7 @@ class feature:
             max(finished_hills[each[0]].intensity))
         self.intensity = finished_hills[each[0]].max_intensity
         self.idict = finished_hills[each[0]].idict
+        self.sqrt_of_i_sum_squares = math.sqrt(sum(v**2 for v in self.idict.values()))
         self.scan_set = finished_hills[each[0]].scan_set
         if not (finished_hills[each[0]].ion_mobility is None):
             self.ion_mobility = finished_hills[each[0]].opt_ion_mobility
