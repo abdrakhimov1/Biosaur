@@ -158,7 +158,7 @@ def cos_correlation_new(theoretical_list, experimental_list, shf):
 
     return top / bottom, sum(theoretical_list) / theor_total_sum
 
-#FIXME считать не по union а по intersection, а знаменатель через numpy.norma 
+#FIXME (возможно) считать не по union а по intersection, а знаменатель через numpy.norma 
 def cos_correlation_fill_zeroes(hill_1, hill_2):
 
     # common_set = set(hill_1.scan_id + hill_2.scan_id)

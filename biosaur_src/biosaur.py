@@ -15,8 +15,8 @@ coloredlogs.install()
 
 def run():
 
-    welcome_message = pyfiglet.figlet_format("Welcome to Meteor", font="slant")
-    print(colored(welcome_message, 'yellow'))
+    welcome_message = pyfiglet.figlet_format("Welcome to Biosaur", font="slant")
+    print(colored(welcome_message, 'green'))
     print('=========================================================== \n')
     print(colored(u'Copyright [2019] [ABDRAKHIMOV & IVANOV Inc. \u00a9] \n\
 Licensed under the Apache License, Version 2.0 (the "License"); \n\

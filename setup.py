@@ -11,7 +11,7 @@ with open("README.md", "r") as fh:
 
 setup(
     name             = 'Biosaur',
-    version          = '0.0.1',
+    version          = '0.0.2',
     description      = '''Proteomics post-search algorithm''',
     long_description = long_description,
     long_description_content_type = "text/markdown",
