@@ -4,6 +4,7 @@ from scipy.stats import binom
 import math
 from multiprocessing import Queue, Process, cpu_count
 import logging
+from collections import defaultdict
 logging.basicConfig(format=u'%(filename)s[LINE:%(lineno)d]#\
 %(levelname)-8s [%(asctime)s] %(message)s', level=logging.DEBUG)
 
@@ -160,21 +161,19 @@ def cos_correlation_new(theoretical_list, experimental_list, shf):
 
 def cos_correlation_fill_zeroes(hill_1, hill_2):
 
-    # common_set = set(hill_1.scan_id + hill_2.scan_id)
-    common_set = hill_1.scan_set.union(hill_2.scan_set)
+    inter_set = hill_1.scan_set.intersection(hill_2.scan_set)
+    if len(inter_set):
 
-    top = 0
-    bot_h1 = 0
-    bot_h2 = 0
-    for i in common_set:
-        h1_val = hill_1.idict.get(i, 0)
-        h2_val = hill_2.idict.get(i, 0)
-        bot_h1 += h1_val ** 2
-        bot_h2 += h2_val ** 2
-        top += h1_val * h2_val
-    bottom = math.sqrt(bot_h1) * math.sqrt(bot_h2)
+        top = 0
+        for i in inter_set:
+            h1_val = hill_1.idict.get(i, 0)
+            h2_val = hill_2.idict.get(i, 0)
+            top += h1_val * h2_val
+        bottom = hill_1.sqrt_of_i_sum_squares * hill_2.sqrt_of_i_sum_squares
+        return top / bottom
 
-    return top / bottom
+    else:
+        return 0
 
 
 def checking_cos_correlation_for_carbon(
@@ -341,39 +340,32 @@ def iter_hills(
                                 # print(k)
                                 break
                             if abs(diff) <= mz_tol:
-                                if len(
-                                    peak.finished_hills[i]
-                                    .scan_set.intersection(
-                                        peak.finished_hills[j].scan_set)):
 
-                                    # if abs(middle_index_i - middle_index_j)
-                                    # <= max(1, 0.5 *max(j_len, i_len)):
+                                cos_cor_test = cos_correlation_fill_zeroes(
+                                                    peak.finished_hills[i],
+                                                    peak.finished_hills[j])
 
-                                    cos_cor_test = cos_correlation_fill_zeroes(
-                                                        peak.finished_hills[i],
-                                                        peak.finished_hills[j])
+                                if cos_cor_test >= 0.7:
 
-                                    if cos_cor_test >= 0.7:
+                                    if len(candidates) < numb:
 
-                                        if len(candidates) < numb:
+                                        candidates.append((j, charge))
 
-                                            candidates.append((j, charge))
+                                    else:
 
-                                        else:
+                                        j_prev = candidates[-1][0]
+                                        intensity2 = (
+                                                    peak.finished_hills[j]
+                                                    .max_intensity)
 
-                                            j_prev = candidates[-1][0]
-                                            intensity2 = (
-                                                        peak.finished_hills[j]
-                                                        .max_intensity)
-
-                                            if abs(
-                                                peak.finished_hills[j].mz -
-                                                (peak.finished_hills[i]
-                                                    .mz)) < abs(
-                                                (peak.finished_hills[j_prev]
-                                                    .mz) -
-                                                    peak.finished_hills[i].mz):
-                                                candidates[-1] = (j, charge)
+                                        if abs(
+                                            peak.finished_hills[j].mz -
+                                            (peak.finished_hills[i]
+                                                .mz)) < abs(
+                                            (peak.finished_hills[j_prev]
+                                                .mz) -
+                                                peak.finished_hills[i].mz):
+                                            candidates[-1] = (j, charge)
 
                     # lc = len(candidates)
                     # if lc < numb:
@@ -718,6 +710,124 @@ def boosting_secondstep_with_processes(
                 else:
                     # print(item[0].mz_array)
                     result_q = result_q + item
+            # print(len(result_peak.finished_hills))
+        for p in procs:
+            p.join()
+
+    return result_q
+
+
+def func_for_correlation_matrix(set_of_features):
+
+    logging.info(u'Counting features correlation...')
+
+    out_put_dict = defaultdict(list)
+
+    set_length = len(set_of_features)
+    each_id = 0
+    # for each_id, each_feature in enumerate(set_of_features[:-1]):
+    while each_id < set_length - 1:
+        each_feature = set_of_features[each_id]
+        if each_id % 50 == 0:
+            logging.info(
+                u'Calculated ' +
+                str(each_id + 1) +
+                '/' + str(set_length) +
+                ' features.')
+
+        other_id = each_id + 1
+        while other_id < set_length:
+            other_feature = set_of_features[other_id]
+
+            if other_feature.scans[0] > each_feature.scans[-1]:
+                break
+
+            tmp_corr = cos_correlation_fill_zeroes(
+                each_feature,
+                other_feature)
+            if tmp_corr > 0.5:
+                out_put_dict[each_feature.id] += [{other_feature.id: tmp_corr}]
+                out_put_dict[other_feature.id] += [{each_feature.id: tmp_corr}]
+            other_id += 1
+        if each_id == 200:
+            pass
+        each_id += 1
+
+    return out_put_dict
+
+
+def worker_func_for_correlation_matrix(
+        set_of_features,
+        qout,
+        start_index,
+        end_index,
+        ):
+
+    result_q = func_for_correlation_matrix(
+        set_of_features,
+            )
+
+    if result_q:
+        qout.put(result_q)
+
+    qout.put(None)
+
+
+def boosting_correlation_matrix_with_processes(
+        number_of_processes, set_of_features):
+
+    if number_of_processes == 0:
+
+        try:
+            number_of_processes = cpu_count()
+
+        except NotImplementedError:
+            number_of_processes = 1
+
+    if number_of_processes == 1:
+
+        result_q = func_for_correlation_matrix(
+            set_of_features
+        )
+
+    else:
+        qout = Queue()
+
+#         qin = list(islice(it, 500000))
+#         if not len(qin):
+#             break
+# #           print 'Loaded 500000 items. Ending cycle.'
+        procs = []
+
+        set_len = len(set_of_features)
+        step = int(set_len / number_of_processes) + 1
+        start_index = 0
+
+        for i in range(number_of_processes):
+            p = Process(
+                target=worker_func_for_correlation_matrix,
+                args=(
+                    set_of_features,
+                    qout,
+                    start_index,
+                    step + start_index,))
+            # print(start_index)
+            p.start()
+            procs.append(p)
+            start_index += step
+
+        result_q = False
+
+        for _ in range(number_of_processes):
+            for item in iter(qout.get, None):
+                # print(len(item[0].finished_hills))
+                if not result_q:
+                    # print(item[0].mz_array)
+                    result_q = item
+
+                else:
+                    # print(item[0].mz_array)
+                    result_q = result_q.update(item)
             # print(len(result_peak.finished_hills))
         for p in procs:
             p.join()

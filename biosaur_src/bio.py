@@ -25,6 +25,8 @@ def process_files(args):
              + path.extsep + 'features.tsv'
     hillValleyFactor = args['hill_valley_factor']
 
+    correlation_map = args['correlation_map']
+
     data_for_analyse = list(z for z in mzml.read(
         input_mzml_path) if z['ms level'] == 1)
     logging.info(u'Number of MS1 scans: ' + str(len(data_for_analyse)))
@@ -35,7 +37,8 @@ def process_files(args):
         ' processes...')
 
     out_file = open(output_file, 'w')
-    out_file.write('massCalib\
+    if correlation_map:
+        out_file.write('massCalib\
 \trtApex\
 \tintensityApex\
 \tcharge\
@@ -55,6 +58,33 @@ def process_files(args):
 \tmz\
 \trtStart\
 \trtEnd\
+\tcorrMap\
+\tid\
+\tion_mobility\
+\tFAIMS\
+\n')
+    else:
+        out_file.write('massCalib\
+\trtApex\
+\tintensityApex\
+\tcharge\
+\tnIsotopes\
+\tnScans\
+\tsulfur\
+\tcos_corr_1\
+\tcos_corr_2\
+\tdiff_for_output\
+\tcorr_fill_zero\
+\tintensity_1\
+\tscan_id_1\
+\tmz_std_1\
+\tintensity_2\
+\tscan_id_2\
+\tmz_std_2\
+\tmz\
+\trtStart\
+\trtEnd\
+\tid\
 \tion_mobility\
 \tFAIMS\
 \n')
@@ -147,42 +177,82 @@ def process_files(args):
 
         features = []
 
-        for each in tmp:
-            features.append(classes.feature(test_peak.finished_hills, each))
+        for each_id, each in enumerate(tmp):
+            features.append(
+                classes.feature(
+                    test_peak.finished_hills,
+                    each,
+                    each_id))
 
         # print(
         #     "Timer: " +
         #     str(round((features_time - start_time) / 60, 1)) + " minutes.")
 
         out_file = open(output_file, 'a')
-        for x in features:
-            out_file.write('\t'.join([str(z) for z in [
-                x.neutral_mass,
-                test_RT_dict[x.scan_id],
-                x.intensity,
-                x.charge,
-                x.isotopes_numb + 1,
-                x.scan_numb,
-                x.sulfur,
-                x.cos_corr,
-                x.cos_corr_2,
-                x.diff_for_output,
-                x.corr_fill_zero,
-                x.intensity_1,
-                x.scan_id_1,
-                x.mz_std_1,
-                x.intensity_2,
-                x.scan_id_2,
-                x.mz_std_2,
-                x.mz,
-                test_RT_dict[x.scans[0]],
-                test_RT_dict[x.scans[-1]],
-                (
-                    x.ion_mobility if not
-                    (x.ion_mobility is None)
-                    else 0),
-                faims_val]]) + '\n')
-        out_file.close()
+
+        if correlation_map:
+            features = sorted(features, key=lambda x: x.scans[0])
+            tmp_dict = funcs.func_for_correlation_matrix(features)
+            for idx, x in enumerate(features):
+                out_file.write('\t'.join([str(z) for z in [
+                    x.neutral_mass,
+                    test_RT_dict[x.scan_id],
+                    x.intensity,
+                    x.charge,
+                    x.isotopes_numb + 1,
+                    x.scan_numb,
+                    x.sulfur,
+                    x.cos_corr,
+                    x.cos_corr_2,
+                    x.diff_for_output,
+                    x.corr_fill_zero,
+                    x.intensity_1,
+                    x.scan_id_1,
+                    x.mz_std_1,
+                    x.intensity_2,
+                    x.scan_id_2,
+                    x.mz_std_2,
+                    x.mz,
+                    test_RT_dict[x.scans[0]],
+                    test_RT_dict[x.scans[-1]],
+                    tmp_dict[idx],
+                    idx,
+                    (
+                        x.ion_mobility if not
+                        (x.ion_mobility is None)
+                        else 0),
+                    faims_val]]) + '\n')
+            out_file.close()
+        else:
+            for idx, x in enumerate(features):
+                out_file.write('\t'.join([str(z) for z in [
+                    x.neutral_mass,
+                    test_RT_dict[x.scan_id],
+                    x.intensity,
+                    x.charge,
+                    x.isotopes_numb + 1,
+                    x.scan_numb,
+                    x.sulfur,
+                    x.cos_corr,
+                    x.cos_corr_2,
+                    x.diff_for_output,
+                    x.corr_fill_zero,
+                    x.intensity_1,
+                    x.scan_id_1,
+                    x.mz_std_1,
+                    x.intensity_2,
+                    x.scan_id_2,
+                    x.mz_std_2,
+                    x.mz,
+                    test_RT_dict[x.scans[0]],
+                    test_RT_dict[x.scans[-1]],
+                    idx,
+                    (
+                        x.ion_mobility if not
+                        (x.ion_mobility is None)
+                        else 0),
+                    faims_val]]) + '\n')
+            out_file.close()
 
         total_time = time.time()
         print('=========================================================== \n')
