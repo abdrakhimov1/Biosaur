@@ -51,6 +51,13 @@ limitations under the License. \n', 'yellow'))
         '--number_of_processes',
         help='Number of processes',
         default=0)
+
+    parser.add_argument(
+        '-cm',
+        '--correlation_map',
+        help='Add correlation map to final table',
+        action='store_true')
+
     parser.add_argument(
         '-ac',
         '--mass_accuracy',
