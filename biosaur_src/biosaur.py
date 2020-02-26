@@ -61,6 +61,12 @@ limitations under the License. \n', 'yellow'))
         action='store_true')
 
     parser.add_argument(
+        '-nm',
+        '--negative_mode',
+        help='Add negative mode option',
+        action='store_true')
+
+    parser.add_argument(
         '-ac',
         '--mass_accuracy',
         help='Mass accuracy',
