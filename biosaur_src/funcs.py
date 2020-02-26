@@ -169,7 +169,10 @@ def cos_correlation_fill_zeroes(hill_1, hill_2):
             h1_val = hill_1.idict.get(i, 0)
             h2_val = hill_2.idict.get(i, 0)
             top += h1_val * h2_val
+        
+        
         bottom = hill_1.sqrt_of_i_sum_squares * hill_2.sqrt_of_i_sum_squares
+        # bottom = math.sqrt(sum(v * v for key, v in hill_1.idict.items() if key in inter_set)) * math.sqrt(sum(v * v for key, v in hill_2.idict.items() if key in inter_set))
         return top / bottom
 
     else:
@@ -716,7 +719,7 @@ def boosting_secondstep_with_processes(
 
     return result_q
 
-
+#FIXME исправить функцию для подсчета по списку необходимых индексов 
 def func_for_correlation_matrix(set_of_features):
 
     logging.info(u'Counting features correlation...')
@@ -749,9 +752,42 @@ def func_for_correlation_matrix(set_of_features):
                 out_put_dict[each_feature.id] += [{other_feature.id: tmp_corr}]
                 out_put_dict[other_feature.id] += [{each_feature.id: tmp_corr}]
             other_id += 1
-        if each_id == 200:
-            pass
+
         each_id += 1
+
+    return out_put_dict
+
+
+def func_for_correlation_matrix_2(set_of_features, idx_list):
+
+    logging.info(u'Counting features correlation...')
+
+    out_put_dict = defaultdict(list)
+
+    # for each_id, each_feature in enumerate(set_of_features[:-1]):
+    for i in idx_list:
+        each_feature = set_of_features[i]
+        if i % 50 == 0:
+            logging.info(
+                u'Calculated ' +
+                str(i + 1) +
+                '/' + str(len(idx_list)) +
+                ' features.')
+
+        other_id = i + 1
+        while other_id < idx_list[-1] + 1:
+            other_feature = set_of_features[other_id]
+
+            if other_feature.scans[0] > each_feature.scans[-1]:
+                break
+
+            tmp_corr = cos_correlation_fill_zeroes(
+                each_feature,
+                other_feature)
+            if tmp_corr > 0.5:
+                out_put_dict[each_feature.id] += [{other_feature.id: tmp_corr}]
+                out_put_dict[other_feature.id] += [{each_feature.id: tmp_corr}]
+            other_id += 1
 
     return out_put_dict
 
@@ -759,12 +795,12 @@ def func_for_correlation_matrix(set_of_features):
 def worker_func_for_correlation_matrix(
         set_of_features,
         qout,
-        start_index,
-        end_index,
+        idx_list
         ):
 
-    result_q = func_for_correlation_matrix(
+    result_q = func_for_correlation_matrix_2(
         set_of_features,
+        idx_list,
             )
 
     if result_q:
@@ -798,23 +834,24 @@ def boosting_correlation_matrix_with_processes(
 #             break
 # #           print 'Loaded 500000 items. Ending cycle.'
         procs = []
-
+#FIXME пофиксить(проверить) индексы в idx_list 
         set_len = len(set_of_features)
-        step = int(set_len / number_of_processes) + 1
+        step = int(set_len / 2 / number_of_processes) + 1
         start_index = 0
 
         for i in range(number_of_processes):
+
+            idx_list = [x for x in range(i * step, (i + 1) * step)] + [x for x in range(set_len - (i+1) * step, set_len - i * step)]
+
             p = Process(
                 target=worker_func_for_correlation_matrix,
                 args=(
                     set_of_features,
                     qout,
-                    start_index,
-                    step + start_index,))
+                    idx_list))
             # print(start_index)
             p.start()
             procs.append(p)
-            start_index += step
 
         result_q = False
 
@@ -827,7 +864,8 @@ def boosting_correlation_matrix_with_processes(
 
                 else:
                     # print(item[0].mz_array)
-                    result_q = result_q.update(item)
+                    for key in item:
+                        result_q.update(item[key])
             # print(len(result_peak.finished_hills))
         for p in procs:
             p.join()

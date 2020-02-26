@@ -582,14 +582,20 @@ class peak:
 
 class feature:
 
-    def __init__(self, finished_hills, each, each_id):
+    def __init__(self, finished_hills, each, each_id, negative_mode):
 
         self.charge = each[1][0][1]
         self.shift = each[3]
         # self.mz = finished_hills[each[0]].mz
         self.mz = np.median(finished_hills[each[0]].mass)
-        self.neutral_mass = self.mz * self.charge - \
-            1.0073 * self.charge - self.shift * 1.00335
+        self.negative_mode = negative_mode
+
+        if negative_mode == True:
+            self.neutral_mass = self.mz * self.charge + \
+                1.0072765 * self.charge - self.shift * 1.00335
+        else:
+            self.neutral_mass = self.mz * self.charge - \
+                1.0072765 * self.charge - self.shift * 1.00335
 
         self.isotopes_numb = len(each[1])
 

@@ -18,6 +18,12 @@ def process_files(args):
     min_charge = args['min_charge']
     max_charge = args['max_charge']
     min_intensity = args['min_intensity']
+
+    if args['negative_mode']:
+        negative_mode = True
+    else:
+        negative_mode = False
+
     if args['output_file']:
         output_file = args['output_file']
     else:
@@ -182,7 +188,7 @@ def process_files(args):
                 classes.feature(
                     test_peak.finished_hills,
                     each,
-                    each_id))
+                    each_id, negative_mode))
 
         # print(
         #     "Timer: " +
@@ -192,8 +198,9 @@ def process_files(args):
 
         if correlation_map:
             features = sorted(features, key=lambda x: x.scans[0])
-            tmp_dict = funcs.func_for_correlation_matrix(features)
-            for idx, x in enumerate(features):
+            #FIXME исправить количество процессов для подсчета матрицы кореляции (сейчас 1 процесс)
+            tmp_dict = funcs.boosting_correlation_matrix_with_processes(1, features)
+            for x in features:
                 out_file.write('\t'.join([str(z) for z in [
                     x.neutral_mass,
                     test_RT_dict[x.scan_id],
@@ -215,8 +222,8 @@ def process_files(args):
                     x.mz,
                     test_RT_dict[x.scans[0]],
                     test_RT_dict[x.scans[-1]],
-                    tmp_dict[idx],
-                    idx,
+                    tmp_dict[x.id],
+                    x.id,
                     (
                         x.ion_mobility if not
                         (x.ion_mobility is None)
@@ -224,7 +231,7 @@ def process_files(args):
                     faims_val]]) + '\n')
             out_file.close()
         else:
-            for idx, x in enumerate(features):
+            for x in features:
                 out_file.write('\t'.join([str(z) for z in [
                     x.neutral_mass,
                     test_RT_dict[x.scan_id],
@@ -246,7 +253,7 @@ def process_files(args):
                     x.mz,
                     test_RT_dict[x.scans[0]],
                     test_RT_dict[x.scans[-1]],
-                    idx,
+                    x.id,
                     (
                         x.ion_mobility if not
                         (x.ion_mobility is None)
