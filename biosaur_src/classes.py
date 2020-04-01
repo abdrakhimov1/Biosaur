@@ -534,7 +534,7 @@ class peak:
         new_hills = []
         for hill_idx, hill in enumerate(self.finished_hills):
             smothed_intensity = meanfilt(hill.intensity, 3)
-            smothed_intensity = medfilt(smothed_intensity, 3)
+            #smothed_intensity = medfilt(smothed_intensity, 3)
 
             c_len = len(smothed_intensity) - 3
             idx = 3
