@@ -188,7 +188,8 @@ def process_files(args):
                 classes.feature(
                     test_peak.finished_hills,
                     each,
-                    each_id, negative_mode))
+                    each_id,
+                    negative_mode))
 
         # print(
         #     "Timer: " +
