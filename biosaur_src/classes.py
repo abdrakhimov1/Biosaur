@@ -1,4 +1,5 @@
 from copy import copy
+from collections import defaultdict
 import numpy as np
 from scipy.signal import medfilt
 import math
@@ -161,6 +162,17 @@ class peak:
 
         self.intervals = [start_id, ]
         self.actual_degree = 0
+
+    def recalc_fast_array(self):
+        m_koef = 0.02
+        im_koef = 0.02
+        # self.fast_array = [int(tm/m_koef) for tm in self.mz_array]
+        self.fast_array = (self.mz_array/m_koef).astype(int)
+        self.fast_dict = defaultdict(set)
+        for idx, fm in enumerate(self.fast_array):
+            self.fast_dict[fm-1].add(idx)
+            self.fast_dict[fm+1].add(idx)
+            self.fast_dict[fm].add(idx)
 
     def concat_peak_with(self, second_peak):
 
@@ -347,31 +359,41 @@ class peak:
     def newid(self, nearest, mask):
         return np.nonzero(mask)[0][nearest]
 
-    def get_nearest_id(self, i, prev_nearest, diff, mz_array_l, ion_mobility):
+    def get_potential_nearest(self, i_fast):
+        return self.fast_dict.get(i_fast, None)
+
+    def get_nearest_id(self, i, prev_nearest, diff, mz_array_l, ion_mobility, mask):
         mass_diff = diff * 1e-6 * i
         best_diff = 2 * mass_diff
         best_id = False
         cur_md_abs = 0
         best_prev_nearest_id = False
 
-        nearest_id = prev_nearest
-        while nearest_id < mz_array_l:
-            cur_md = self.mz_array[nearest_id] - i
-            cur_md_abs = abs(cur_md)
-            if cur_md_abs <= mass_diff:
-                if not best_prev_nearest_id:
-                    best_prev_nearest_id = int(nearest_id)
-                if (ion_mobility is None) or \
-                        abs(ion_mobility -
-                            self.ion_mobility[nearest_id][-1]) <= 0.1:
-                    if cur_md_abs <= best_diff:
-                        best_diff = float(cur_md_abs)
-                        best_id = int(nearest_id)
-                    # prev_nearest = int(nearest_id)
-            elif cur_md > mass_diff:
-                break
+        i_fast = int(i / 0.02)
 
-            nearest_id += 1
+        set_idx = self.get_potential_nearest(i_fast)
+
+        if set_idx:
+            for nearest_id in set_idx:
+                if mask[nearest_id]:
+            # nearest_id = prev_nearest
+            # while nearest_id < mz_array_l:
+                    cur_md = self.mz_array[nearest_id] - i
+                    cur_md_abs = abs(cur_md)
+                    if cur_md_abs <= mass_diff:
+                        if not best_prev_nearest_id:
+                            best_prev_nearest_id = int(nearest_id)
+                        if (ion_mobility is None) or \
+                                abs(ion_mobility -
+                                    self.ion_mobility[nearest_id][-1]) <= 0.1:
+                            if cur_md_abs <= best_diff:
+                                best_diff = float(cur_md_abs)
+                                best_id = int(nearest_id)
+                        # prev_nearest = int(nearest_id)
+                # elif cur_md > mass_diff:
+                #     break
+
+                # nearest_id += 1
         if not best_prev_nearest_id:
             best_prev_nearest_id = prev_nearest
         return best_id, best_diff / i, best_prev_nearest_id
@@ -400,6 +422,11 @@ class peak:
 
         prev_nearest = 0
 
+        self.recalc_fast_array()
+        # self.recalc_fast_array()
+        
+        mask = [True] * (len(self.mz_array))
+
         mz_array_l = len(self.mz_array)
         for idx, i in enumerate(next_mz_array):
             best_id, \
@@ -412,11 +439,9 @@ class peak:
                     (next_ion_mobility_array[idx]
                         if not (
                         next_ion_mobility_array is None)
-                        else None))
+                        else None), mask)
             if best_id:
                 tmp1.append([best_id, idx, md_res])
-
-        mask = [True] * (len(self.mz_array))
 
         tmp1_nearest_id_arr, tmp1_idx_arr, tmp1_diff_arr = self.get_arrays(
             tmp1)
@@ -460,13 +485,38 @@ class peak:
                         if tmp1_nearest_id_arr[idx] in saved_index:
 
                             element_mz = next_mz_array[element]
-                            nearest = self.get_nearest_value(element_mz, mask)
-                            nearest_id = self.newid(nearest, mask)
+                            element_im = (next_ion_mobility_array[element]
+                                    if not (
+                                    next_ion_mobility_array is None)
+                                    else None)
+
+
+                            # nearest = self.get_nearest_value(element_mz, mask)
+                            # nearest_id_old = self.newid(nearest, mask)
+
+                            nearest_id, \
+                                md_res, \
+                                prev_nearest = self.get_nearest_id(
+                                    element_mz,
+                                    0,
+                                    diff,
+                                    0,
+                                    element_im, mask)
+
+                            # if nearest_id_old != nearest_id:
+                            #     print('WTF', nearest_id_old, nearest_id)
+
+                            if not nearest_id:
+                                nearest_id = 0
+                                md_res = 1e6
+                            # else:
+                            #     if nearest_id_old != nearest_id:
+                            #         md_old = abs((self.mz_array[nearest_id] - element_mz) / element_mz)
+                            #         print('WTF', nearest_id_old, nearest_id, md_old, md_res)
+
                             tmp1_nearest_id_arr[idx] = nearest_id
 
-                            tmp1_diff_arr[idx] = abs(
-                                self.mz_array[nearest_id] - element_mz) / \
-                                element_mz
+                            tmp1_diff_arr[idx] = md_res
                         else:
                             break
                     sort_list = np.argsort(
@@ -493,6 +543,7 @@ class peak:
                  for i in range(len(next_mz_array))]
         next_mz_array_size = next_mz_array[mask2].size
         self.mz_array = np.append(self.mz_array, next_mz_array[mask2])
+        self.recalc_fast_array()
 
         n_i_a_m = next_intensity_array[mask2]
         if not (self.ion_mobility is None):

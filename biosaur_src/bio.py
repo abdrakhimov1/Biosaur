@@ -33,8 +33,21 @@ def process_files(args):
 
     correlation_map = args['correlation_map']
 
-    data_for_analyse = list(z for z in mzml.read(
-        input_mzml_path) if z['ms level'] == 1)
+    # data_for_analyse = list(z for z in mzml.read(
+    #     input_mzml_path) if z['ms level'] == 1)
+
+    data_for_analyse = []
+    for z in mzml.read(input_mzml_path):
+        if z['ms level'] == 1:
+            idx = z['intensity array'] >= min_intensity
+            z['intensity array'] = z['intensity array'][idx]
+            z['m/z array'] = z['m/z array'][idx]
+            if 'mean inverse reduced ion mobility array' in z:
+                z['mean inverse reduced ion mobility array'] = z['mean inverse reduced ion mobility array'][idx]
+            data_for_analyse.append(z)
+            # if len(data_for_analyse) > 150:
+            #     break
+
     logging.info(u'Number of MS1 scans: ' + str(len(data_for_analyse)))
     tmp_str = 'maximum amount of'
     logging.info(
