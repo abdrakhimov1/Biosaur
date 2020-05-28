@@ -236,7 +236,7 @@ def iter_hills(
         mass_acc,
         start_index,
         end_index,
-        proccess_number):
+        proccess_number=1):
 
     ready = []
     averagine_mass = 111.1254
@@ -568,7 +568,7 @@ def boosting_firststep_with_processes(
     if number_of_processes == 1:
 
         result_peak, result_RT_dict = data_to_features(
-            data_for_analyse, mass_accuracy, min_length)
+            data_for_analyse, mass_accuracy, min_length, 1)
 
     else:
         qout = Queue()
