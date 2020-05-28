@@ -45,7 +45,7 @@ def process_files(args):
             if 'mean inverse reduced ion mobility array' in z:
                 z['mean inverse reduced ion mobility array'] = z['mean inverse reduced ion mobility array'][idx]
             data_for_analyse.append(z)
-            # if len(data_for_analyse) > 150:
+            # if len(data_for_analyse) > 500:
             #     break
 
     logging.info(u'Number of MS1 scans: ' + str(len(data_for_analyse)))
@@ -174,9 +174,16 @@ def process_files(args):
 
         test_peak.sort_finished_hills()
 
+
+        logging.info('Start recalc_fast_array_for_finished_hills...')
+
+        test_peak.recalc_fast_array_for_finished_hills()
+
         # output = open('first_step.pkl', 'wb')
         # pickle.dump(test_peak, output)
         # output.close()
+
+        logging.info('Start boosting_secondstep_with_processes...')
 
         tmp = funcs.boosting_secondstep_with_processes(
             number_of_processes,

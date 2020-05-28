@@ -15,7 +15,6 @@ def meanfilt(data, window_width):
 class ready_hill:
 
     def __init__(self, intensity, scan_id, mass, ion_mobility):
-
         self.mz = np.median(mass)
         self.mz_std = np.std(mass)
         self.intensity = intensity
@@ -38,8 +37,10 @@ class ready_hill:
         for i, j in zip(self.scan_id, self.intensity):
             self.idict[i] = j
 
-        self.sqrt_of_i_sum_squares = math.sqrt(
-            sum(v**2 for v in self.idict.values()))
+        # self.sqrt_of_i_sum_squares = math.sqrt(
+        #     sum(v**2 for v in self.idict.values()))
+        intensity_np = np.array(intensity)
+        self.sqrt_of_i_sum_squares = np.sqrt(np.sum(np.power(intensity_np, 2)))
 
 
 class next_peak:
@@ -162,6 +163,22 @@ class peak:
 
         self.intervals = [start_id, ]
         self.actual_degree = 0
+
+
+    def get_potential_isotope_id(self, i_fast, i_idx):
+        tmp = self.finished_hills_fast_dict.get(i_fast, [])
+        # tmp.remove(i_idx)
+        return tmp
+
+    def recalc_fast_array_for_finished_hills(self):
+        m_koef = 0.02
+        im_koef = 0.02
+        self.finished_hills_fast_array = [int(fh.mz/m_koef) for fh in self.finished_hills]
+        self.finished_hills_fast_dict = defaultdict(set)
+        for idx, fm in enumerate(self.finished_hills_fast_array):
+            self.finished_hills_fast_dict[fm-1].add(idx)
+            self.finished_hills_fast_dict[fm+1].add(idx)
+            self.finished_hills_fast_dict[fm].add(idx)
 
     def recalc_fast_array(self):
         m_koef = 0.02
@@ -536,14 +553,15 @@ class peak:
             if not (self.ion_mobility is None):
                 self.ion_mobility[i].append(next_ion_mobility_array[idx])
             self.mass_array[i].append(next_mz_array[idx])
-            self.mz_array[i] = np.mean(self.mass_array[i][-3:])
+            tmp_mass_array = self.mass_array[i][-3:]
+            self.mz_array[i] = sum(tmp_mass_array)/len(tmp_mass_array)
 
         added = set(x[1] for x in tmp2)
         mask2 = [(False if i in added else True)
                  for i in range(len(next_mz_array))]
         next_mz_array_size = next_mz_array[mask2].size
         self.mz_array = np.append(self.mz_array, next_mz_array[mask2])
-        self.recalc_fast_array()
+        # self.recalc_fast_array()
 
         n_i_a_m = next_intensity_array[mask2]
         if not (self.ion_mobility is None):
