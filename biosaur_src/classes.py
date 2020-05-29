@@ -206,7 +206,6 @@ class peak:
     def crosslink_simple(self, mass_accuracy):
 
         crosslink_counter = 0
-        # crosslink_counter2 = 0
         self.finished_hills = sorted(
             self.finished_hills,
             key=lambda x: x.scan_id[0])
@@ -214,59 +213,74 @@ class peak:
         allowed_ids = set()
         for i in self.intervals:
             allowed_ids.add(i - 1)
-            allowed_ids.add(i)
-            allowed_ids.add(i + 1)
 
-        i = 0
-        ini_len = len(self.finished_hills)
+            
+        allowed_ids2 = set()
+        for i in self.intervals:
+            allowed_ids2.add(i)
 
-        while i < ini_len:
+        map_ids_1 = defaultdict(list)
+        map_ids_2 = defaultdict(set)
 
-            hill = self.finished_hills[i]
+        self.finished_hills_fast_dict = defaultdict(set)
+        m_koef = 0.02
 
-            if hill.scan_id[-1] in allowed_ids:
-                j = i + 1
+        for i, hill in enumerate(self.finished_hills):
 
-                while j < ini_len:
+            end_scan = hill.scan_id[-1]
+            if end_scan in allowed_ids:
+                map_ids_1[end_scan].append(i)
+                fm = int(hill.mz / m_koef)
+                self.finished_hills_fast_dict[fm-1].add(i)
+                self.finished_hills_fast_dict[fm+1].add(i)
+                self.finished_hills_fast_dict[fm].add(i)
 
-                    hill2 = self.finished_hills[j]
+                
+            start_scan = hill.scan_id[0]
+            if start_scan in allowed_ids2:
+                map_ids_2[start_scan].add(i)
+                fm = int(hill.mz / m_koef)
+                self.finished_hills_fast_dict[fm-1].add(i)
+                self.finished_hills_fast_dict[fm+1].add(i)
+                self.finished_hills_fast_dict[fm].add(i)
 
-                    if hill2.scan_id[0] in allowed_ids:
+        banned_ids = set()
+        way_to_combine = []
 
-                        # if hill.scan_id[-1] == hill2.scan_id[0]:
-                        if abs(hill.scan_id[-1] - hill2.scan_id[0]) <= 1:
-                            # crosslink_counter2 += 1
+        for al_id in sorted(allowed_ids):
+
+            for i in map_ids_1[al_id]:
+
+                if i not in banned_ids:
+
+                    hill = self.finished_hills[i]
+                    fm = int(hill.mz / m_koef)
+                    for j in self.finished_hills_fast_dict[fm]:
+
+                        if j in map_ids_2[al_id+1] and j not in banned_ids:
+
+                            hill2 = self.finished_hills[j]
                             if abs(hill.mz - hill2.mz) / \
                                     hill.mz <= mass_accuracy * 1e-6:
 
-                                self.finished_hills[i] = ready_hill(
-                                    intensity=hill.intensity +
-                                    hill2.intensity,
-                                    scan_id=hill.scan_id +
-                                    hill2.scan_id,
-                                    mass=hill.mass +
-                                    hill2.mass,
-                                    ion_mobility=(
-                                        hill.ion_mobility +
-                                        hill2.ion_mobility
-                                        if not (hill.ion_mobility is None)
-                                        else None))
-                                del self.finished_hills[j]
-                                ini_len -= 1
-                                crosslink_counter += 1
-                                j -= 1
-                        elif hill2.scan_id[0] > hill.scan_id[-1] + 1:
-                            break
+                                banned_ids.add(i)
+                                banned_ids.add(j)
+                                way_to_combine.append((i, j))
 
-                    elif hill2.scan_id[0] > hill.scan_id[-1] + 1:
-                        break
-
-                    j += 1
-
-            i += 1
-
-        # print(crosslink_counter)
-        # print(crosslink_counter2)
+        for i, j in way_to_combine[::-1]:
+            self.finished_hills[i] = ready_hill(
+                intensity=hill.intensity +
+                hill2.intensity,
+                scan_id=hill.scan_id +
+                hill2.scan_id,
+                mass=hill.mass +
+                hill2.mass,
+                ion_mobility=(
+                    hill.ion_mobility +
+                    hill2.ion_mobility
+                    if not (hill.ion_mobility is None)
+                    else None))
+            del self.finished_hills[j]
 
     def crosslink(self, mass_accuracy):
 
