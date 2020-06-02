@@ -26,6 +26,7 @@ def run():
     parser.add_argument('-hvf', '--hill_valley_factor', help='Hill Valley Factor', default=0.8)
     parser.add_argument('--debug', action='store_true', help='Enable debugging output')
     parser.add_argument('-out', '--output_file', help='Output File', default = 'test_custom.features.tsv')
+    parser.add_argument('-tm', '--targeted_mode', help='Targeted mode file', default = False )
     args = vars(parser.parse_args())
     
     logging.basicConfig(format='%(levelname)9s: %(asctime)s %(message)s',

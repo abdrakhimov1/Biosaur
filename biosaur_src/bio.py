@@ -22,7 +22,11 @@ def process_files(args):
     max_charge = args['max_charge']
     min_intensity = args['min_intensity']
     output_file = args['output_file']
+    target_mode_file = args['targeted_mode']
     hillValleyFactor = args['hill_valley_factor']
+
+    if target_mode_file:
+        target_data = pd.read_csv(target_mode_file, sep=" ")
     
     #input_mzml_path = 'plasma.mzML'
     #test_peak, test_RT_dict = funcs.boosting_with_processes('plasma.mzML', mass_accuracy, 3)
