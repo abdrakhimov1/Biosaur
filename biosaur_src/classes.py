@@ -4,6 +4,9 @@ from scipy.signal import medfilt
 import math
 
 
+def newid(nearest, mask):
+    return np.nonzero(mask)[0][nearest]
+
 def meanfilt(data, window_width):
     cumsum_vec = np.cumsum(np.insert(data, 0, 0))
     ma_vec = (cumsum_vec[window_width:] -
@@ -69,6 +72,7 @@ class peak_ion_mobility:
         self.ion_mobility_min = [ion_mobility, ]
         self.total = 1
 
+
     def get_nearest_values(self, value):
         return np.argsort(np.abs(self.mz_array) - value)
 
@@ -83,11 +87,13 @@ class peak_ion_mobility:
         self.ion_mobility_min.append(ion_mobility)
         self.total += 1
 
+
     def append_and_recalc(self, mz, intensity, ion_mobility, index):
         self.mass_array[index].append(mz)
         self.intensity_array[index].append(intensity)
         self.ion_mobility_array[index].append(ion_mobility)
         self.recalc(index)
+
 
     def recalc(self, index):
         self.mz_array[index] = np.mean(self.mass_array[index])
@@ -97,6 +103,7 @@ class peak_ion_mobility:
             self.intensity_max[index] = self.intensity_array[index][-1]
             self.ion_mobility_opt[index] = self.ion_mobility_array[index][-1]
 
+    
     def push_me_to_the_peak(self, mz, intensity, ion_mobility, diff):
         # nearest_ids = self.get_nearest_values(mz)
         flag = 0
@@ -162,6 +169,7 @@ class peak:
         self.intervals = [start_id, ]
         self.actual_degree = 0
 
+    
     def concat_peak_with(self, second_peak):
 
         self.mz_array = self.mz_array + second_peak.mz_array
@@ -174,6 +182,8 @@ class peak:
             second_peak.crosslinked_hills
         self.intervals = self.intervals + second_peak.intervals
 
+
+    
     def crosslink_simple(self, mass_accuracy):
 
         crosslink_counter = 0
@@ -239,6 +249,7 @@ class peak:
         # print(crosslink_counter)
         # print(crosslink_counter2)
 
+    
     def crosslink(self, mass_accuracy):
 
         crosslink_counter = 0
@@ -284,9 +295,11 @@ class peak:
         # print(crosslink_counter)
         # print(crosslink_counter2)
 
+
     def sort_finished_hills(self):
         self.finished_hills = sorted(self.finished_hills, key=lambda x: x.mz)
 
+    
     def check_its_ready(self, id_real, check_degree, min_length):
 
         mask_to_del = [True] * self.mz_array.size
@@ -322,6 +335,7 @@ class peak:
 
         self.mz_array = self.mz_array[mask_to_del]
 
+
     def push_left(self, min_length):
         mask_to_del = [True] * self.mz_array.size
         for i in range(self.mz_array.size)[::-1]:
@@ -341,12 +355,10 @@ class peak:
 
         self.mz_array = self.mz_array[mask_to_del]
 
+
     def get_nearest_value(self, value, mask):
         return np.argmin(np.abs(self.mz_array[mask] - value))
-
-    def newid(self, nearest, mask):
-        return np.nonzero(mask)[0][nearest]
-
+    
     def get_nearest_id(self, i, prev_nearest, diff, mz_array_l, ion_mobility):
         mass_diff = diff * 1e-6 * i
         best_diff = 2 * mass_diff
@@ -376,12 +388,14 @@ class peak:
             best_prev_nearest_id = prev_nearest
         return best_id, best_diff / i, best_prev_nearest_id
 
+    
     def get_arrays(self, tmp1):
         tmp1_nearest_id_arr = np.array([x[0] for x in tmp1])
         tmp1_idx_arr = np.array([x[1] for x in tmp1])
         tmp1_diff_arr = np.array([x[2] for x in tmp1])
         return tmp1_nearest_id_arr, tmp1_idx_arr, tmp1_diff_arr
 
+    
     def push_me_to_the_peak(self, next_peak, diff, min_length):
 
         next_mz_array = next_peak.next_mz_array
@@ -461,7 +475,7 @@ class peak:
 
                             element_mz = next_mz_array[element]
                             nearest = self.get_nearest_value(element_mz, mask)
-                            nearest_id = self.newid(nearest, mask)
+                            nearest_id = newid(nearest, mask)
                             tmp1_nearest_id_arr[idx] = nearest_id
 
                             tmp1_diff_arr[idx] = abs(
@@ -507,6 +521,7 @@ class peak:
 
         self.selfsort()
 
+    
     def selfsort(self):
         idx = np.argsort(self.mz_array)
         self.mz_array = self.mz_array[idx]
@@ -516,6 +531,7 @@ class peak:
             self.ion_mobility = [self.ion_mobility[i] for i in idx]
         self.mass_array = [self.mass_array[i] for i in idx]
 
+    
     def cutting_down(self, intensity_propotion):
 
         for idx, peak in enumerate(self.finished_hills):
@@ -528,6 +544,7 @@ class peak:
                     peak.intensity[-1] >= max_intensity_propotion):
 
                 del self.finished_hills[idx]
+
 
     def split_peaks(self, hillValleyFactor):
         set_to_del = set()

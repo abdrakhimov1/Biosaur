@@ -2,7 +2,7 @@ from __future__ import division
 import argparse
 import logging
 import json_logging
-from . import bio
+from biosaur_src import bio
 import pyfiglet
 import json
 import coloredlogs

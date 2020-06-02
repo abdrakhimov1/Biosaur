@@ -159,24 +159,26 @@ def cos_correlation_new(theoretical_list, experimental_list, shf):
     return top / bottom, sum(theoretical_list) / theor_total_sum
 
 
-def cos_correlation_fill_zeroes(hill_1, hill_2):
 
-    inter_set = hill_1.scan_set.intersection(hill_2.scan_set)
+def cos_correlation_numba_booster(inter_set, dict1, dict2, sqrt1, sqrt2):
     if len(inter_set):
-
         top = 0
         for i in inter_set:
-            h1_val = hill_1.idict.get(i, 0)
-            h2_val = hill_2.idict.get(i, 0)
+            h1_val = dict1.get(i, 0)
+            h2_val = dict2.get(i, 0)
             top += h1_val * h2_val
         
-        
-        bottom = hill_1.sqrt_of_i_sum_squares * hill_2.sqrt_of_i_sum_squares
-        # bottom = math.sqrt(sum(v * v for key, v in hill_1.idict.items() if key in inter_set)) * math.sqrt(sum(v * v for key, v in hill_2.idict.items() if key in inter_set))
+        bottom = sqrt1* sqrt2
         return top / bottom
 
     else:
         return 0
+
+def cos_correlation_fill_zeroes(hill_1, hill_2):
+
+    inter_set = hill_1.scan_set.intersection(hill_2.scan_set)
+
+    return cos_correlation_numba_booster(inter_set, hill_1.idict, hill_2.idict, hill_1.sqrt_of_i_sum_squares, hill_2.sqrt_of_i_sum_squares)
 
 
 def checking_cos_correlation_for_carbon(
