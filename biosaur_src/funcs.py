@@ -4,6 +4,7 @@ from scipy.stats import binom
 import math
 from multiprocessing import Queue, Process, cpu_count
 import logging
+import itertools
 from collections import defaultdict
 logging.basicConfig(format=u'%(filename)s[LINE:%(lineno)d]#\
 %(levelname)-8s [%(asctime)s] %(message)s', level=logging.DEBUG)
@@ -287,11 +288,9 @@ def iter_hills(
 
     for i in range(start_index, end_index, 1):
 
+        ready_set = set()
+
         if i not in ready_set:
-
-            candidates = []
-            s_candidates = []
-
 
             peak_1_mz = peak.finished_hills[i].mz
             left_border_i = peak.finished_hills[i].scan_id[0]
@@ -301,17 +300,28 @@ def iter_hills(
             mz_tol = mass_acc * 1e-6 * peak.finished_hills[i].mz
             # mz_tol = 5 * peak.finished_hills[i].mz_std
 
+
             for charge in charges:
+
+                ready_set = set()
+                
+                candidates = []
+                s_candidates = []
 
                 neutral_mass = peak_1_mz * charge
                 tmp_intensity = a[int(100 * (neutral_mass // 100))]
                 s_tmp_intensity = s_list
 
-                s_all_theoretical_int = False
+                s_all_theoretical_int = [
+                    peak.finished_hills[i].max_intensity *
+                    s_tmp_intensity[z] /
+                    s_tmp_intensity[0] for z in numbers[:2]]
 
                 k = i
                 ks = i
                 for numb in numbers[1:]:
+
+                    tmp_candidates = []
 
                     m_to_check = peak_1_mz + (1.00335 * numb / charge)
                     m_to_check_fast = int(m_to_check/0.02)
@@ -345,29 +355,41 @@ def iter_hills(
 
                                 if cos_cor_test >= 0.7:
 
-                                    if len(candidates) < numb:
+                                    tmp_candidates.append((j, charge, cos_cor_test))
 
-                                        candidates.append((j, charge))
-                                        if numb == 1:
-                                            diff_for_output = diff / peak_2_mz
+                                    if numb == 1:
+                                        diff_for_output = diff / peak_2_mz
 
-                                    else:
+                                    # if len(candidates) < numb:
 
-                                        j_prev = candidates[-1][0]
-                                        intensity2 = (
-                                                    peak.finished_hills[j]
-                                                    .max_intensity)
+                                    #     candidates.append((j, charge, cos_cor_test))
+                                    #     if numb == 1:
+                                    #         diff_for_output = diff / peak_2_mz
 
-                                        if abs(
-                                            peak.finished_hills[j].mz -
-                                            (peak.finished_hills[i]
-                                                .mz)) < abs(
-                                            (peak.finished_hills[j_prev]
-                                                .mz) -
-                                                peak.finished_hills[i].mz):
-                                            candidates[-1] = (j, charge)
-                                            if numb == 1:
-                                                diff_for_output = diff / peak_2_mz
+                                    # else:
+
+                                    #     j_prev = candidates[-1][0]
+                                    #     cos_cor_test_prev = candidates[-1][2]
+                                    #     if cos_cor_test > cos_cor_test_prev:
+                                    #         candidates[-1] = (j, charge, cos_cor_test)
+                                    #         if numb == 1:
+                                    #             diff_for_output = diff / peak_2_mz
+
+
+                                        # intensity2 = (
+                                        #             peak.finished_hills[j]
+                                        #             .max_intensity)
+
+                                        # if abs(
+                                        #     peak.finished_hills[j].mz -
+                                        #     (peak.finished_hills[i]
+                                        #         .mz)) < abs(
+                                        #     (peak.finished_hills[j_prev]
+                                        #         .mz) -
+                                        #         peak.finished_hills[i].mz):
+                                        #     candidates[-1] = (j, charge, cos_cor_test)
+                                        #     if numb == 1:
+                                        #         diff_for_output = diff / peak_2_mz
 
                     # lc = len(candidates)
                     # if lc < numb:
@@ -404,12 +426,6 @@ def iter_hills(
                                             peak.finished_hills[i],
                                             peak.finished_hills[j]) >= 0.7:
 
-                                        if not s_all_theoretical_int:
-                                            s_all_theoretical_int = [
-                                                peak.finished_hills[i].max_intensity *
-                                                s_tmp_intensity[z] /
-                                                s_tmp_intensity[0] for z in numbers[:2]]
-
                                         if len(s_candidates) < numb / 2:
 
                                             s_candidates.append(
@@ -437,89 +453,137 @@ def iter_hills(
                                                     s_th_i))
 
                                             pass
+                    if len(tmp_candidates):
+                        # if len(tmp_candidates) > 1:
+                        #     print(len(tmp_candidates))
+                        candidates.append(tmp_candidates)
+
 
                     if len(candidates) < numb:
                         break
 
-                if len(candidates) > 0:  # FIXME
+                # if len(candidates) > 0:  # FIXME
 
-                    break
+                #     break
 
-            if candidates:
+                if candidates:
 
-                all_theoretical_int = [
-                    peak.finished_hills[i].max_intensity *
-                    tmp_intensity[z] /
-                    tmp_intensity[0] for z in numbers]
+                    for iter_candidates in itertools.product(*candidates):
 
-                all_exp_intensity = [peak.finished_hills[i].max_intensity]
+                        all_theoretical_int = [
+                            peak.finished_hills[i].max_intensity *
+                            tmp_intensity[z] /
+                            tmp_intensity[0] for z in numbers]
 
-                for j in candidates:
-                    if j[1] != 0:
-                        all_exp_intensity.append(
-                            peak.finished_hills[j[0]].max_intensity)
+                        all_exp_intensity = [peak.finished_hills[i].max_intensity]
+
+                        for j in iter_candidates:
+                            if j[1] != 0:
+                                all_exp_intensity.append(
+                                    peak.finished_hills[j[0]].max_intensity)
+                            else:
+                                all_exp_intensity.append(0)
+
+                        (
+                            cos_corr,
+                            number_of_passed_isotopes,
+                            shift) = checking_cos_correlation_for_carbon(
+                            all_theoretical_int, all_exp_intensity, 0.6)
+
+                        cos_corr_for_output = cos_correlation(
+                                                all_theoretical_int[0:1],
+                                                all_exp_intensity[0:1])
+
+                        if cos_corr:  # прикрутить изменение параметра 0.6
+
+                            # print(shift)
+
+                            iter_candidates = iter_candidates[:number_of_passed_isotopes]
+
+                            # добавить s_candidates
+                            j2 = iter_candidates[0][0]
+                            scan_id_2 = peak.finished_hills[j2].scan_id
+                            mz_std_2 = peak.finished_hills[j2].mz_std
+                            intensity_2 = peak.finished_hills[j2].intensity
+                            ready.append([
+                                i,
+                                iter_candidates,
+                                [],
+                                shift,
+                                [cos_corr,
+                                    cos_corr_for_output,
+                                    cos_cor_test,
+                                    diff_for_output,
+                                    peak.finished_hills[i].intensity,
+                                    peak.finished_hills[i].scan_id,
+                                    peak.finished_hills[i].mz_std,
+                                    intensity_2,
+                                    scan_id_2,
+                                    mz_std_2]])
+
+                            # ready_set.add(i)
+                            # for ic in candidates:
+                            #     if ic[1] != 0:
+                            #         ready_set.add(ic[0])
+
+                            if len(s_candidates):
+                                s_all_exp_intensity = [peak.finished_hills[i].max_intensity]
+                                for k in s_candidates:
+                                    s_all_exp_intensity.append(
+                                        peak.finished_hills[k[0]].max_intensity)
+                                if cos_correlation(
+                                        s_all_theoretical_int,
+                                        s_all_exp_intensity) > 0.6:
+
+                                    ready[-1][2] = s_candidates
+
+                                    # for ic in s_candidates:
+                                    #     ready_set.add(ic[0])
+
+    ready = sorted(ready, key=lambda x: -len(x[1]))
+    ready_final = []
+    ready_set = set()
+    
+    import pickle
+    pickle.dump(ready, open('/home/mark/ready2.pickle', 'wb'))
+
+    for pep_feature in ready:
+        if pep_feature[0] not in ready_set:
+            if not any(cand[0] in ready_set for cand in pep_feature[1]):
+                ready_final.append(pep_feature)
+                ready_set.add(pep_feature[0])
+                for cand in pep_feature[1]:
+                    ready_set.add(cand[0])
+            else:
+                tmp = []
+                for cand in pep_feature[1]:
+                    if cand[0] not in ready_set:
+                        tmp.append(cand)
                     else:
-                        all_exp_intensity.append(0)
+                        break
+                if len(tmp):
+                    pep_feature[1] = tmp
+                    ready_final.append(pep_feature)
+                    ready_set.add(pep_feature[0])
+                    for cand in pep_feature[1]:
+                        ready_set.add(cand[0])
 
-                (
-                    cos_corr,
-                    number_of_passed_isotopes,
-                    shift) = checking_cos_correlation_for_carbon(
-                    all_theoretical_int, all_exp_intensity, 0.6)
 
-                cos_corr_for_output = cos_correlation(
-                                        all_theoretical_int[0:1],
-                                        all_exp_intensity[0:1])
+    # ready = sorted(ready, key=lambda x: -len(x[1]))
+    # ready_final = []
+    # ready_set = set()
 
-                if cos_corr:  # прикрутить изменение параметра 0.6
 
-                    # print(shift)
+    # for pep_feature in ready:
+    #     if pep_feature[0] not in ready_set:
+    #         ready_final.append(pep_feature)
+    #         ready_set.add(pep_feature[0])
 
-                    candidates = candidates[:number_of_passed_isotopes]
 
-                    # добавить s_candidates
-                    j2 = candidates[0][0]
-                    scan_id_2 = peak.finished_hills[j2].scan_id
-                    mz_std_2 = peak.finished_hills[j2].mz_std
-                    intensity_2 = peak.finished_hills[j2].intensity
-                    ready.append([
-                        i,
-                        candidates,
-                        [],
-                        shift,
-                        [cos_corr,
-                            cos_corr_for_output,
-                            cos_cor_test,
-                            diff_for_output,
-                            peak.finished_hills[i].intensity,
-                            peak.finished_hills[i].scan_id,
-                            peak.finished_hills[i].mz_std,
-                            intensity_2,
-                            scan_id_2,
-                            mz_std_2]])
-
-                    ready_set.add(i)
-                    for ic in candidates:
-                        if ic[1] != 0:
-                            ready_set.add(ic[0])
-
-                    if len(s_candidates):
-                        s_all_exp_intensity = [peak.finished_hills[i].max_intensity]
-                        for k in s_candidates:
-                            s_all_exp_intensity.append(
-                                peak.finished_hills[k[0]].max_intensity)
-                        if cos_correlation(
-                                s_all_theoretical_int,
-                                s_all_exp_intensity) > 0.6:
-
-                            ready[-1][2] = s_candidates
-
-                            for ic in s_candidates:
-                                ready_set.add(ic[0])
     logging.info(
         u'All hills were iterated correctly with this process /' +
         str(proccess_number + 1) + '/ -->')
-    return ready
+    return ready_final
 
 
 def worker_data_to_features(

@@ -39,14 +39,18 @@ def process_files(args):
     data_for_analyse = []
     for z in mzml.read(input_mzml_path):
         if z['ms level'] == 1:
-            idx = z['intensity array'] >= min_intensity
-            z['intensity array'] = z['intensity array'][idx]
-            z['m/z array'] = z['m/z array'][idx]
-            if 'mean inverse reduced ion mobility array' in z:
-                z['mean inverse reduced ion mobility array'] = z['mean inverse reduced ion mobility array'][idx]
-            data_for_analyse.append(z)
-            # if len(data_for_analyse) > 500:
-            #     break
+
+            # if 5.3 <= float(z['scanList']['scan'][0]['scan start time']) <= 5.5:
+            if 1:
+
+                idx = z['intensity array'] >= min_intensity
+                z['intensity array'] = z['intensity array'][idx]
+                z['m/z array'] = z['m/z array'][idx]
+                if 'mean inverse reduced ion mobility array' in z:
+                    z['mean inverse reduced ion mobility array'] = z['mean inverse reduced ion mobility array'][idx]
+                data_for_analyse.append(z)
+                # if len(data_for_analyse) > 500:
+                #     break
 
     logging.info(u'Number of MS1 scans: ' + str(len(data_for_analyse)))
     tmp_str = 'maximum amount of'
@@ -162,6 +166,7 @@ def process_files(args):
             'Your hills proccesing with ' +
             str(number_of_processes if number_of_processes != 0 else tmp_str) +
             ' processes...')
+
         test_peak.crosslink_simple(mass_accuracy)
         # print(
         #     "Timer: " +
@@ -173,6 +178,11 @@ def process_files(args):
         # test_peak.split_peaks(hillValleyFactor)
 
         test_peak.sort_finished_hills()
+
+        
+        logging.info(
+            str(len(test_peak.finished_hills)) +
+            u' hills were detected...')
 
 
         logging.info('Start recalc_fast_array_for_finished_hills...')

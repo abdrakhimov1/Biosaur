@@ -335,7 +335,8 @@ class peak:
         mask_to_del = [True] * self.mz_array.size
         for i in range(self.mz_array.size)[::-1]:
 
-            degree_actual = id_real - self.scan_id[i][-1]
+            degree_actual = id_real - self.scan_id[i][0] - len(self.scan_id[i]) + 1
+            # degree_actual = id_real - self.scan_id[i][-1]
             # or (degree_actual == 2 and len(self.scan_id[i]) == 1):
             if degree_actual > check_degree:
 
@@ -350,7 +351,8 @@ class peak:
                     list_ion_mobility = None
                 list_scan_id = self.scan_id.pop(i)
                 list_mass = self.mass_array.pop(i)
-                if len(list_scan_id) >= min_length:
+                lsi = len(list_scan_id)
+                if lsi >= min_length:
                     tmp_ready_hill = ready_hill(intensity=list_intensity,
                                                 scan_id=list_scan_id,
                                                 mass=list_mass,
@@ -621,7 +623,8 @@ class peak:
 
             c_len = len(smothed_intensity) - 3
             idx = 3
-            min_idx = False
+            # min_idx = False
+            min_idx_list = []
             min_val = 1.0
             while idx <= c_len:
                 l_r = float(smothed_intensity[idx]) / \
@@ -633,18 +636,26 @@ class peak:
                     mult_val = l_r * r_r
                     if mult_val < min_val:
                         min_val = mult_val
-                        min_idx = idx
+                        if not len(min_idx_list) or idx > min_idx_list[-1] + 3:
+                            min_idx_list.append(idx)
+                        else:
+                            min_idx_list[-1] = idx
+                        # min_idx = idx
                 idx += 1
-            if min_idx:
+            if len(min_idx_list):
                 set_to_del.add(hill_idx)
-                new_hills.append(ready_hill(
-                                    intensity=hill.intensity[:min_idx],
-                                    scan_id=hill.scan_id[:min_idx],
-                                    mass=hill.mass[:min_idx],
-                                    ion_mobility=(
-                                        hill.ion_mobility[:min_idx] if not
-                                        (hill.ion_mobility is None) else
-                                        None)))
+                prev_idx = 0
+                for min_idx in min_idx_list:
+                    new_hills.append(ready_hill(
+                                        intensity=hill.intensity[prev_idx:min_idx],
+                                        scan_id=hill.scan_id[prev_idx:min_idx],
+                                        mass=hill.mass[prev_idx:min_idx],
+                                        ion_mobility=(
+                                            hill.ion_mobility[prev_idx:min_idx] if not
+                                            (hill.ion_mobility is None) else
+                                            None)))
+                    prev_idx = min_idx
+
                 new_hills.append(ready_hill(
                                     intensity=hill.intensity[min_idx:],
                                     scan_id=hill.scan_id[min_idx:],
