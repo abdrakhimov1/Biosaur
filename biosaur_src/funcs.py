@@ -163,7 +163,7 @@ def cos_correlation_new(theoretical_list, experimental_list, shf):
 def cos_correlation_fill_zeroes(hill_1, hill_2):
 
     inter_set = hill_1.scan_set.intersection(hill_2.scan_set)
-    if len(inter_set):
+    if len(inter_set) >= 3:
 
         top = 0
         for i in inter_set:
@@ -225,6 +225,9 @@ def checking_cos_correlation_for_carbon(
             # return correlation, pos#, shift
 
         # experimental_list = experimental_list[:-1]
+
+        if best_value:
+            break
 
     return best_cor, best_pos, best_shift
 

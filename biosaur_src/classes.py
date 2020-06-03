@@ -9,6 +9,7 @@ def meanfilt(data, window_width):
     cumsum_vec = np.cumsum(np.insert(data, 0, 0))
     ma_vec = (cumsum_vec[window_width:] -
               cumsum_vec[:-window_width]) / window_width
+    ma_vec = data[:1] + list(ma_vec) + data[-1:]
     return ma_vec
 
 
@@ -25,6 +26,7 @@ class ready_hill:
         tmp = max(range(len(self.intensity)), key=self.intensity.__getitem__)
         self.scan_of_max_intensity = self.scan_id[tmp]
         self.max_intensity = self.intensity[tmp]
+        # self.max_intensity = sum(self.intensity)
         if not (ion_mobility is None):
             self.ion_mobility = ion_mobility
             self.opt_ion_mobility = self.ion_mobility[tmp]
@@ -618,8 +620,15 @@ class peak:
         set_to_del = set()
         new_hills = []
         for hill_idx, hill in enumerate(self.finished_hills):
+            # smothed_intensity = hill.intensity
+
             smothed_intensity = meanfilt(hill.intensity, 3)
-            #smothed_intensity = medfilt(smothed_intensity, 3)
+
+            # smothed_intensity = medfilt(smothed_intensity, 3)
+
+
+            # smothed_intensity = medfilt(hill.intensity, 3)
+            # smothed_intensity = meanfilt(smothed_intensity, 3)
 
             c_len = len(smothed_intensity) - 3
             idx = 3
