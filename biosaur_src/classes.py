@@ -17,6 +17,7 @@ class ready_hill:
 
     def __init__(self, intensity, scan_id, mass, ion_mobility):
         self.mz = np.median(mass)
+        # self.mz = np.mean(mass)
         self.mz_std = np.std(mass)
         self.intensity = intensity
         self.scan_id = scan_id
@@ -691,6 +692,7 @@ class feature:
         self.shift = each[3]
         # self.mz = finished_hills[each[0]].mz
         self.mz = np.median(finished_hills[each[0]].mass)
+        # self.mz = np.mean(finished_hills[each[0]].mass)
         self.negative_mode = negative_mode
 
         if negative_mode == True:

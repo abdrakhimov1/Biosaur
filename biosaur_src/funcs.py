@@ -325,6 +325,8 @@ def iter_hills(
                 for numb in numbers[1:]:
 
                     tmp_candidates = []
+                    tmp_s_candidates = []
+
 
                     m_to_check = peak_1_mz + (1.00335 * numb / charge)
                     m_to_check_fast = int(m_to_check/0.02)
@@ -425,41 +427,47 @@ def iter_hills(
                                 # cos_correlation_fill_zeroes(peak.finished_hills[i],
                                 # peak.finished_hills[j]) >= 0.7:
                                 if abs(diff) <= mz_tol:
-                                    if cos_correlation_fill_zeroes(
+                                    s_cos_cor = cos_correlation_fill_zeroes(
                                             peak.finished_hills[i],
-                                            peak.finished_hills[j]) >= 0.7:
+                                            peak.finished_hills[j])
+                                    if s_cos_cor >= 0.7:
 
-                                        if len(s_candidates) < numb / 2:
+                                        tmp_s_candidates.append([j, charge, s_cos_cor])
 
-                                            s_candidates.append(
-                                                (j, charge))
+                                        # if len(s_candidates) < numb / 2:
 
-                                        else:
+                                        #     s_candidates.append(
+                                        #         (j, charge))
 
-                                            intensity1 = (
-                                                peak.finished_hills[
-                                                    s_candidates[-1][0]]
-                                                .max_intensity)
-                                            intensity2 = (
-                                                peak.finished_hills[j]
-                                                .max_intensity)
-                                            s_th_i = s_all_theoretical_int[
-                                                int(numb / 2)]
-                                            s_candidates[-1] = (
-                                                first_or_second(
-                                                    s_candidates[-1][0],
-                                                    j,
-                                                    s_candidates[-1][1],
-                                                    charge,
-                                                    intensity1,
-                                                    intensity2,
-                                                    s_th_i))
+                                        # else:
 
-                                            pass
+                                        #     intensity1 = (
+                                        #         peak.finished_hills[
+                                        #             s_candidates[-1][0]]
+                                        #         .max_intensity)
+                                        #     intensity2 = (
+                                        #         peak.finished_hills[j]
+                                        #         .max_intensity)
+                                        #     s_th_i = s_all_theoretical_int[
+                                        #         int(numb / 2)]
+                                        #     s_candidates[-1] = (
+                                        #         first_or_second(
+                                        #             s_candidates[-1][0],
+                                        #             j,
+                                        #             s_candidates[-1][1],
+                                        #             charge,
+                                        #             intensity1,
+                                        #             intensity2,
+                                        #             s_th_i))
+
+                                            # pass
                     if len(tmp_candidates):
                         # if len(tmp_candidates) > 1:
                         #     print(len(tmp_candidates))
                         candidates.append(tmp_candidates)
+
+                        if len(tmp_s_candidates):
+                            s_candidates = tmp_s_candidates
 
 
                     if len(candidates) < numb:
@@ -470,6 +478,32 @@ def iter_hills(
                 #     break
 
                 if candidates:
+
+
+                    if len(s_candidates):
+
+                        tmp_s_candidates = []
+
+                        for iter_s_candidates in s_candidates:
+
+
+                            s_all_exp_intensity = [peak.finished_hills[i].max_intensity]
+                            # for k in iter_s_candidates:
+                            s_all_exp_intensity.append(
+                                peak.finished_hills[iter_s_candidates[0]].max_intensity)
+
+                            s_c_cor = cos_correlation(
+                                    s_all_theoretical_int,
+                                    s_all_exp_intensity)
+                            if s_c_cor > 0.6:
+                                tmp_s_candidates.append(iter_s_candidates)
+                                tmp_s_candidates[-1].append(s_c_cor)
+
+                        print(tmp_s_candidates)
+                        if len(tmp_s_candidates):
+                            s_candidates = sorted(tmp_s_candidates, key=lambda x: -x[3])
+                        else:
+                            s_candidates = []
 
                     for iter_candidates in itertools.product(*candidates):
 
@@ -511,7 +545,7 @@ def iter_hills(
                             ready.append([
                                 i,
                                 iter_candidates,
-                                [],
+                                s_candidates,
                                 shift,
                                 [cos_corr,
                                     cos_corr_for_output,
@@ -529,16 +563,6 @@ def iter_hills(
                             #     if ic[1] != 0:
                             #         ready_set.add(ic[0])
 
-                            if len(s_candidates):
-                                s_all_exp_intensity = [peak.finished_hills[i].max_intensity]
-                                for k in s_candidates:
-                                    s_all_exp_intensity.append(
-                                        peak.finished_hills[k[0]].max_intensity)
-                                if cos_correlation(
-                                        s_all_theoretical_int,
-                                        s_all_exp_intensity) > 0.6:
-
-                                    ready[-1][2] = s_candidates
 
                                     # for ic in s_candidates:
                                     #     ready_set.add(ic[0])
@@ -557,6 +581,11 @@ def iter_hills(
                 ready_set.add(pep_feature[0])
                 for cand in pep_feature[1]:
                     ready_set.add(cand[0])
+                for s_cand in pep_feature[2]:
+                    if s_cand[0] not in ready_set:
+                        ready_set.add(s_cand[0])
+                        break
+
             else:
                 tmp = []
                 for cand in pep_feature[1]:
@@ -570,6 +599,10 @@ def iter_hills(
                     ready_set.add(pep_feature[0])
                     for cand in pep_feature[1]:
                         ready_set.add(cand[0])
+                    for s_cand in pep_feature[2]:
+                        if s_cand[0] not in ready_set:
+                            ready_set.add(s_cand[0])
+                            break
 
 
     # ready = sorted(ready, key=lambda x: -len(x[1]))
