@@ -27,7 +27,7 @@ def check_its_ready(id_real, peak, check_degree):
             peak.finished_hills.append(tmp_ready_hill)
 
 
-def data_to_features(input_file, max_diff, min_length, proccess_number):
+def data_to_features(input_file, max_diff, min_length, proccess_number, start_index, end_index):
 
     # data = mzml.read(input_file)
 
@@ -79,6 +79,12 @@ def data_to_features(input_file, max_diff, min_length, proccess_number):
 
     for i in input_file:
         # print(i)
+        idx = (i['m/z array'] >= start_index) & (i['m/z array'] < end_index)
+        # (dists >= r) & (dists <= r+dr)
+        i['m/z array'] = i['m/z array'][idx]
+        i['intensity array'] = i['intensity array'][idx]
+        if 'mean inverse reduced ion mobility array' in i:
+            i['mean inverse reduced ion mobility array'] = i['mean inverse reduced ion mobility array'][idx]
         if k == 0:
             peak1 = classes.peak(
                 i['m/z array'],
@@ -179,6 +185,58 @@ def cos_correlation_fill_zeroes(hill_1, hill_2):
     else:
         return 0
 
+
+def checking_cos_correlation_for_carbon_noshift(
+        theoretical_list, experimental_list, thresh):
+
+    # prev_corr = 0
+    # size = 1
+    best_value = 0
+    best_shift = 0
+    best_pos = 1
+    best_cor = 0
+
+    # for shf in range(4):
+    for shf in range(1):
+        # shf = 0
+        pos = len(experimental_list)
+
+        while pos != 1:
+
+            averagineCorrelation, averagineExplained = cos_correlation_new(
+                theoretical_list, experimental_list[:pos], shf)
+
+            # if averagineExplained < 0.5:
+            #     break
+            if averagineCorrelation >= thresh:
+                tmp_val = averagineCorrelation * averagineExplained
+                if tmp_val > best_value:
+                    best_value = tmp_val
+                    best_cor = averagineCorrelation
+                    best_shift = shf
+                    best_pos = pos
+
+                break
+
+            pos -= 1
+
+            # if correlation >= thresh:
+
+            # if correlation >= prev_corr:
+
+            #     prev_corr = correlation
+            #     size = len(experimental_list)
+
+            # else:
+            # size = len(experimental_list)
+            # return correlation, pos#, shift
+
+        # experimental_list = experimental_list[:-1]
+
+        if best_value:
+            break
+
+    return best_cor, best_pos, best_shift
 
 def checking_cos_correlation_for_carbon(
         theoretical_list, experimental_list, thresh):
@@ -499,7 +557,6 @@ def iter_hills(
                                 tmp_s_candidates.append(iter_s_candidates)
                                 tmp_s_candidates[-1].append(s_c_cor)
 
-                        print(tmp_s_candidates)
                         if len(tmp_s_candidates):
                             s_candidates = sorted(tmp_s_candidates, key=lambda x: -x[3])
                         else:
@@ -556,7 +613,8 @@ def iter_hills(
                                     peak.finished_hills[i].mz_std,
                                     intensity_2,
                                     scan_id_2,
-                                    mz_std_2]])
+                                    mz_std_2],
+                                    [all_theoretical_int, all_exp_intensity]])
 
                             # ready_set.add(i)
                             # for ic in candidates:
@@ -566,43 +624,6 @@ def iter_hills(
 
                                     # for ic in s_candidates:
                                     #     ready_set.add(ic[0])
-
-    ready = sorted(ready, key=lambda x: -len(x[1]))
-    ready_final = []
-    ready_set = set()
-    
-    import pickle
-    pickle.dump(ready, open('/home/mark/ready2.pickle', 'wb'))
-
-    for pep_feature in ready:
-        if pep_feature[0] not in ready_set:
-            if not any(cand[0] in ready_set for cand in pep_feature[1]):
-                ready_final.append(pep_feature)
-                ready_set.add(pep_feature[0])
-                for cand in pep_feature[1]:
-                    ready_set.add(cand[0])
-                for s_cand in pep_feature[2]:
-                    if s_cand[0] not in ready_set:
-                        ready_set.add(s_cand[0])
-                        break
-
-            else:
-                tmp = []
-                for cand in pep_feature[1]:
-                    if cand[0] not in ready_set:
-                        tmp.append(cand)
-                    else:
-                        break
-                if len(tmp):
-                    pep_feature[1] = tmp
-                    ready_final.append(pep_feature)
-                    ready_set.add(pep_feature[0])
-                    for cand in pep_feature[1]:
-                        ready_set.add(cand[0])
-                    for s_cand in pep_feature[2]:
-                        if s_cand[0] not in ready_set:
-                            ready_set.add(s_cand[0])
-                            break
 
 
     # ready = sorted(ready, key=lambda x: -len(x[1]))
@@ -619,7 +640,7 @@ def iter_hills(
     logging.info(
         u'All hills were iterated correctly with this process /' +
         str(proccess_number + 1) + '/ -->')
-    return ready_final
+    return ready
 
 
 def worker_data_to_features(
@@ -630,11 +651,16 @@ def worker_data_to_features(
         mass_accuracy,
         min_length, proccess_number):
 
+    start_index = start_index * (1 - 1e-6 * 2 * mass_accuracy)
+    end_index = end_index * (1 + 1e-6 * 2 * end_index)
+
     result_peak, result_RT_dict = data_to_features(
-        data_for_analyse[start_index:end_index],
+        data_for_analyse,
         mass_accuracy,
         min_length,
-        proccess_number
+        proccess_number,
+        start_index,
+        end_index
         )
 
     if result_peak:
@@ -664,7 +690,7 @@ def boosting_firststep_with_processes(
     if number_of_processes == 1:
 
         result_peak, result_RT_dict = data_to_features(
-            data_for_analyse, mass_accuracy, min_length, 1)
+            data_for_analyse, mass_accuracy, min_length, 1, 0, 2500)
 
     else:
         qout = Queue()
@@ -676,29 +702,34 @@ def boosting_firststep_with_processes(
         procs = []
 
         data_for_analyse_len = len(data_for_analyse)
-        step = int(data_for_analyse_len / number_of_processes) + 1
-        start_index = 0
+        # step = int(data_for_analyse_len / number_of_processes) + 1
+        step = int(2500 / number_of_processes / 3) + 1
+        # start_index = 0
+        start_mz = 100
 
-        for i in range(number_of_processes):
+        for i in range(number_of_processes * 3):
             p = Process(
                 target=worker_data_to_features,
                 args=(
                     data_for_analyse,
                     qout,
-                    start_index,
-                    step + start_index,
+                    start_mz,
+                    step + start_mz,
                     mass_accuracy,
                     min_length, i))
             # print(start_index)
             p.start()
             procs.append(p)
-            start_index += step
+            start_mz += step
 
         result_peak = False
-        result_RT_dict = False
+        result_RT_dict = False#dict()
 
-        for _ in range(number_of_processes):
+        # all_peaks = []
+        for _ in range(number_of_processes * 3):
             for item in iter(qout.get, None):
+                # all_peaks.append(item[0])
+                # result_RT_dict.update(item[1])
                 # print(len(item[0].finished_hills))
                 if not result_peak:
                     # print(item[0].mz_array)
@@ -709,11 +740,20 @@ def boosting_firststep_with_processes(
                     # print(item[0].mz_array)
                     result_peak.concat_peak_with(item[0])
                     result_RT_dict.update(item[1])
+        # result_peak = concat_peaks(all_peaks)
+
             # print(len(result_peak.finished_hills))
         for p in procs:
             p.join()
 
     return result_peak, result_RT_dict
+
+def concat_peaks(all_peaks):
+    all_peaks = sorted(all_peaks, key=lambda x: x.intervals[0])
+    result_peak = all_peaks[0]
+    for peak in all_peaks[1:]:
+        result_peak.concat_peak_new(peak)
+    return result_peak
 
 
 def worker_iter_hills(
@@ -797,23 +837,61 @@ def boosting_secondstep_with_processes(
             procs.append(p)
             start_index += step
 
-        result_q = False
+        ready = False
 
         for _ in range(number_of_processes):
             for item in iter(qout.get, None):
-                # print(len(item[0].finished_hills))
-                if not result_q:
-                    # print(item[0].mz_array)
-                    result_q = item
-
+                if not ready:
+                    ready = item
                 else:
-                    # print(item[0].mz_array)
-                    result_q = result_q + item
-            # print(len(result_peak.finished_hills))
+                    ready = ready + item
         for p in procs:
             p.join()
 
-    return result_q
+    ready = sorted(ready, key=lambda x: -len(x[1]))
+    ready_final = []
+    ready_set = set()
+
+    for pep_feature in ready:
+        if pep_feature[0] not in ready_set:
+            if not any(cand[0] in ready_set for cand in pep_feature[1]):
+                ready_final.append(pep_feature)
+                ready_set.add(pep_feature[0])
+                for cand in pep_feature[1]:
+                    ready_set.add(cand[0])
+                for s_cand in pep_feature[2]:
+                    if s_cand[0] not in ready_set:
+                        ready_set.add(s_cand[0])
+                        break
+
+            else:
+                tmp = []
+                for cand in pep_feature[1]:
+                    if cand[0] not in ready_set:
+                        tmp.append(cand)
+                    else:
+                        break
+                if len(tmp):
+                    pep_feature[1] = tmp
+                    all_theoretical_int, all_exp_intensity = pep_feature[5]
+                    all_theoretical_int = all_theoretical_int[:len(tmp)]
+                    all_exp_intensity = all_exp_intensity[:len(tmp)]
+                    (cos_corr,
+                            number_of_passed_isotopes,
+                            shift) = checking_cos_correlation_for_carbon_noshift(
+                            all_theoretical_int, all_exp_intensity, 0.6)
+
+                    if cos_corr:
+                        ready_final.append(pep_feature)
+                        ready_set.add(pep_feature[0])
+                        for cand in pep_feature[1]:
+                            ready_set.add(cand[0])
+                        for s_cand in pep_feature[2]:
+                            if s_cand[0] not in ready_set:
+                                ready_set.add(s_cand[0])
+                                break
+
+    return ready_final
 
 #FIXME исправить функцию для подсчета по списку необходимых индексов 
 def func_for_correlation_matrix(set_of_features):

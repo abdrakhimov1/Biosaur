@@ -216,11 +216,13 @@ class peak:
         allowed_ids = set()
         for i in self.intervals:
             allowed_ids.add(i - 1)
+            allowed_ids.add(i - 2)
 
             
         allowed_ids2 = set()
         for i in self.intervals:
             allowed_ids2.add(i)
+            allowed_ids2.add(i+1)
 
         map_ids_1 = defaultdict(list)
         map_ids_2 = defaultdict(set)
@@ -260,7 +262,7 @@ class peak:
                     fm = int(hill.mz / m_koef)
                     for j in self.finished_hills_fast_dict[fm]:
 
-                        if j in map_ids_2[al_id+1] and j not in banned_ids:
+                        if (j in map_ids_2[al_id+1] or j in map_ids_2[al_id+2]) and j not in banned_ids:
 
                             hill2 = self.finished_hills[j]
                             if abs(hill.mz - hill2.mz) / \
@@ -284,6 +286,10 @@ class peak:
                     if not (hill.ion_mobility is None)
                     else None))
             del self.finished_hills[j]
+
+        for i in list(range(len(self.finished_hills)))[::-1]:
+            if len(self.finished_hills[i].scan_id) < 3:
+                del self.finished_hills[i]
 
     def crosslink(self, mass_accuracy):
 
@@ -384,8 +390,8 @@ class peak:
             )
             mask_to_del[i] = False
 
-            if len(tmp_ready_hill.scan_id) >= min_length:
-                self.finished_hills.append(tmp_ready_hill)
+            # if len(tmp_ready_hill.scan_id) >= min_length:
+            self.finished_hills.append(tmp_ready_hill)
 
         self.mz_array = self.mz_array[mask_to_del]
 
@@ -617,6 +623,70 @@ class peak:
 
                 del self.finished_hills[idx]
 
+
+    def split_peaks2(self, hillValleyFactor):
+
+        set_to_del = set()
+        new_hills = []
+        for hill_idx, hill in enumerate(self.finished_hills):
+
+            if len(hill.mass) >= 6:
+
+                mz_diff = np.array([z - hill.mz for z in hill.mass])
+                std_5 = np.std(np.diff(mz_diff))
+                smothed_intensity = list(np.abs(np.diff(mz_diff))/std_5)
+
+                c_len = len(smothed_intensity) - 3
+                idx = 3
+                min_idx_list = []
+                min_val = 1.0
+                while idx <= c_len:
+                    mult_val = smothed_intensity[idx]
+                    if mult_val >= hillValleyFactor:
+                        if not len(min_idx_list) or idx >= min_idx_list[-1] + 3:
+                            min_idx_list.append(idx)
+                            min_val = mult_val
+                        elif mult_val < min_val:
+                            min_idx_list[-1] = idx
+                            min_val = mult_val
+                    idx += 1
+
+                if len(min_idx_list):
+                    set_to_del.add(hill_idx)
+                    prev_idx = 1
+                    for min_idx in min_idx_list:
+                        new_hills.append(ready_hill(
+                                            intensity=hill.intensity[prev_idx-1:min_idx],
+                                            scan_id=hill.scan_id[prev_idx-1:min_idx],
+                                            mass=hill.mass[prev_idx-1:min_idx],
+                                            ion_mobility=(
+                                                hill.ion_mobility[prev_idx-1:min_idx] if not
+                                                (hill.ion_mobility is None) else
+                                                None)))
+                        prev_idx = min_idx
+
+                    new_hills.append(ready_hill(
+                                        intensity=hill.intensity[min_idx-1:],
+                                        scan_id=hill.scan_id[min_idx-1:],
+                                        mass=hill.mass[min_idx-1:],
+                                        ion_mobility=(
+                                            hill.ion_mobility[min_idx-1:] if not
+                                            (hill.ion_mobility is None) else
+                                            None)))
+        # print(len(new_hills))
+        # print(len(set_to_del))
+
+        print(len(self.finished_hills))
+
+        for idx in sorted(list(set_to_del))[::-1]:
+            del self.finished_hills[idx]
+        
+        print(len(self.finished_hills))
+        self.finished_hills.extend(new_hills)
+
+        print(len(self.finished_hills))
+
+
     def split_peaks(self, hillValleyFactor):
         set_to_del = set()
         new_hills = []
@@ -644,12 +714,14 @@ class peak:
             #     print(l_r, r_r)
                 if l_r < hillValleyFactor and r_r < hillValleyFactor:
                     mult_val = l_r * r_r
-                    if mult_val < min_val:
+                    # if mult_val < min_val:
+                    #     min_val = mult_val
+                    if not len(min_idx_list) or idx >= min_idx_list[-1] + 3:
+                        min_idx_list.append(idx)
                         min_val = mult_val
-                        if not len(min_idx_list) or idx > min_idx_list[-1] + 3:
-                            min_idx_list.append(idx)
-                        else:
-                            min_idx_list[-1] = idx
+                    elif mult_val < min_val:
+                        min_idx_list[-1] = idx
+                        min_val = mult_val
                         # min_idx = idx
                 idx += 1
             if len(min_idx_list):
@@ -677,9 +749,15 @@ class peak:
         # print(len(new_hills))
         # print(len(set_to_del))
 
+        print(len(self.finished_hills))
+
         for idx in sorted(list(set_to_del))[::-1]:
             del self.finished_hills[idx]
+        
+        print(len(self.finished_hills))
         self.finished_hills.extend(new_hills)
+
+        print(len(self.finished_hills))
 
     # self.finished_hills = result
 

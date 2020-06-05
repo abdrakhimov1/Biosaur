@@ -167,15 +167,27 @@ def process_files(args):
             str(number_of_processes if number_of_processes != 0 else tmp_str) +
             ' processes...')
 
-        test_peak.crosslink_simple(mass_accuracy)
-        # print(
-        #     "Timer: " +
-        #     str(round((time.time() - start_time) / 60, 1)) + " minutes.")
-        test_peak.split_peaks(hillValleyFactor)
+        # test_peak.crosslink_simple(mass_accuracy)
+        logging.info(
+            str(len(test_peak.finished_hills)) +
+            u' hills were detected...')
         # print(
         #     "Timer: " +
         #     str(round((time.time() - start_time) / 60, 1)) + " minutes.")
         # test_peak.split_peaks(hillValleyFactor)
+        # print(
+        #     "Timer: " +
+        #     str(round((time.time() - start_time) / 60, 1)) + " minutes.")
+        # test_peak.split_peaks(hillValleyFactor)
+
+
+        logging.info(
+            str(len(test_peak.finished_hills)) +
+            u' hills were detected...')
+        test_peak.split_peaks2(hillValleyFactor)
+
+
+        # test_peak.split_peaks(0.8)
 
         test_peak.sort_finished_hills()
 
@@ -189,9 +201,10 @@ def process_files(args):
 
         test_peak.recalc_fast_array_for_finished_hills()
 
-        # output = open('first_step.pkl', 'wb')
-        # pickle.dump(test_peak, output)
-        # output.close()
+        output = open('/home/mark/first_step.pkl', 'wb')
+        import pickle
+        pickle.dump(test_peak, output)
+        output.close()
 
         logging.info('Start boosting_secondstep_with_processes...')
 

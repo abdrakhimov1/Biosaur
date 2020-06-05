@@ -101,7 +101,7 @@ limitations under the License. \n', 'yellow'))
         '--hill_valley_factor',
         help='Hill Valley Factor',
         type=float,
-        default=0.8)
+        default=1.0)
     parser.add_argument(
         '--debug',
         action='store_true',
