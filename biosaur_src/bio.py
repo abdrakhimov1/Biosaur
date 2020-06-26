@@ -1,6 +1,7 @@
 import time
 from os import path
 from pyteomics import mzml
+import numpy as np
 from . import funcs
 from . import classes
 import logging
@@ -15,6 +16,7 @@ def process_files(args):
     number_of_processes = int(args['number_of_processes'])
     mass_accuracy = args['mass_accuracy']
     min_length = args['min_length']
+    min_length_hill = args['min_length_hill']
     min_charge = args['min_charge']
     max_charge = args['max_charge']
     min_intensity = args['min_intensity']
@@ -144,7 +146,7 @@ def process_files(args):
 
         test_peak, test_RT_dict = funcs.boosting_firststep_with_processes(
             number_of_processes, data_for_analyse_tmp, mass_accuracy,
-            min_length, data_start_index=data_start_index)
+            min_length_hill, data_start_index=data_start_index)
 
         data_start_index += len(data_for_analyse_tmp)
 
@@ -180,41 +182,57 @@ def process_files(args):
         #     str(round((time.time() - start_time) / 60, 1)) + " minutes.")
         # test_peak.split_peaks(hillValleyFactor)
 
+        test_peak.split_peaks(hillValleyFactor)
 
-        logging.info(
-            str(len(test_peak.finished_hills)) +
-            u' hills were detected...')
-        test_peak.split_peaks2(hillValleyFactor)
+        set_to_del = set()
+        for hill_idx, hill in enumerate(test_peak.finished_hills):
+            if len(hill.mass) >= 40:
+                if max(hill.intensity) < 2 * max(hill.intensity[0], hill.intensity[-1]):
+                    set_to_del.add(hill_idx)
+        
+        print(len(test_peak.finished_hills))
 
-
-        # test_peak.split_peaks(0.8)
-
-        test_peak.sort_finished_hills()
+        for idx in sorted(list(set_to_del))[::-1]:
+            del test_peak.finished_hills[idx]
+        
+        print(len(test_peak.finished_hills))
 
         
         logging.info(
             str(len(test_peak.finished_hills)) +
             u' hills were detected...')
 
+        # test_peak.split_peaks2(hillValleyFactor)
+        logging.info(
+            str(len(test_peak.finished_hills)) +
+            u' hills were detected...')
+
+
+        test_peak.sort_finished_hills()
+
 
         logging.info('Start recalc_fast_array_for_finished_hills...')
 
         test_peak.recalc_fast_array_for_finished_hills()
 
-        output = open('/home/mark/first_step.pkl', 'wb')
-        import pickle
-        pickle.dump(test_peak, output)
-        output.close()
+        # output = open('/home/mark/first_step.pkl', 'wb')
+        # import pickle
+        # pickle.dump(test_peak, output)
+        # output.close()
+
+        # pickle.dump(test_RT_dict, open('/home/mark/test_RT_dict.pkl', 'wb'))
+        
 
         logging.info('Start boosting_secondstep_with_processes...')
 
-        tmp = funcs.boosting_secondstep_with_processes(
+        tmp, isotopes_mass_error_map = funcs.boosting_secondstep_with_processes(
             number_of_processes,
             test_peak,
             min_charge,
             max_charge,
             min_intensity,
-            mass_accuracy)
+            mass_accuracy,
+            min_length)
         # tmp = funcs.iter_hills(test_peak, 1 , 5, 10, mass_accuracy)
         # output = open('second_step.pkl', 'wb')
         # pickle.dump(tmp, output)
@@ -232,7 +250,7 @@ def process_files(args):
                     test_peak.finished_hills,
                     each,
                     each_id,
-                    negative_mode))
+                    negative_mode, isotopes_mass_error_map))
 
         # print(
         #     "Timer: " +

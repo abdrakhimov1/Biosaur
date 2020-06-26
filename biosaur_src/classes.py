@@ -3,6 +3,7 @@ from collections import defaultdict
 import numpy as np
 from scipy.signal import medfilt
 import math
+import itertools
 
 
 def meanfilt(data, window_width):
@@ -16,7 +17,7 @@ def meanfilt(data, window_width):
 class ready_hill:
 
     def __init__(self, intensity, scan_id, mass, ion_mobility):
-        self.mz = np.median(mass)
+        # self.mz = np.median(mass)
         # self.mz = np.mean(mass)
         self.mz_std = np.std(mass)
         self.intensity = intensity
@@ -27,6 +28,8 @@ class ready_hill:
         tmp = max(range(len(self.intensity)), key=self.intensity.__getitem__)
         self.scan_of_max_intensity = self.scan_id[tmp]
         self.max_intensity = self.intensity[tmp]
+        self.mz = np.average(self.mass, weights=self.intensity)
+        # self.mz = self.mass[tmp]
         # self.max_intensity = sum(self.intensity)
         if not (ion_mobility is None):
             self.ion_mobility = ion_mobility
@@ -166,6 +169,8 @@ class peak:
 
         self.intervals = [start_id, ]
         self.actual_degree = 0
+
+        self.medar = [1.0, ]
 
 
     def get_potential_isotope_id(self, i_fast, i_idx):
@@ -341,11 +346,23 @@ class peak:
 
     def check_its_ready(self, id_real, check_degree, min_length):
 
+
+        # ar_for_median = []
+        # for m_ar, scan_ar in zip(self.mass_array, self.scan_id):
+        #     if scan_ar[-1] == id_real - 1:
+        #         if len(m_ar) >= 2:
+        #             ar_for_median.append(m_ar[-1]/m_ar[-2])
+        # # print(np.median(ar_for_median), 'median!')
+        # if len(ar_for_median) >= 20:
+        #     self.medar.append(np.median(ar_for_median))
+        # else:
+        #     self.medar.append(1.0)
+
         mask_to_del = [True] * self.mz_array.size
         for i in range(self.mz_array.size)[::-1]:
 
-            degree_actual = id_real - self.scan_id[i][0] - len(self.scan_id[i]) + 1
-            # degree_actual = id_real - self.scan_id[i][-1]
+            # degree_actual = id_real - self.scan_id[i][0] - len(self.scan_id[i]) + 1
+            degree_actual = id_real - self.scan_id[i][-1]
             # or (degree_actual == 2 and len(self.scan_id[i]) == 1):
             if degree_actual > check_degree:
 
@@ -390,10 +407,12 @@ class peak:
             )
             mask_to_del[i] = False
 
-            # if len(tmp_ready_hill.scan_id) >= min_length:
-            self.finished_hills.append(tmp_ready_hill)
+            if len(tmp_ready_hill.scan_id) >= min_length:
+                self.finished_hills.append(tmp_ready_hill)
 
         self.mz_array = self.mz_array[mask_to_del]
+        
+        # self.medar.append(1.0)
 
     def get_nearest_value(self, value, mask):
         return np.argmin(np.abs(self.mz_array[mask] - value))
@@ -580,6 +599,7 @@ class peak:
             self.mass_array[i].append(next_mz_array[idx])
             tmp_mass_array = self.mass_array[i][-3:]
             self.mz_array[i] = sum(tmp_mass_array)/len(tmp_mass_array)
+            # self.mz_array[i] = np.average(self.mass_array[i][-3:], weights=self.intensity[i][-3:])
 
         added = set(x[1] for x in tmp2)
         mask2 = [(False if i in added else True)
@@ -643,10 +663,16 @@ class peak:
                 while idx <= c_len:
                     mult_val = smothed_intensity[idx]
                     if mult_val >= hillValleyFactor:
-                        if not len(min_idx_list) or idx >= min_idx_list[-1] + 3:
+                        # if not len(min_idx_list) or idx >= min_idx_list[-1] + 3:
+                        #     min_idx_list.append(idx)
+                        #     min_val = mult_val
+                        # elif mult_val < min_val:
+                        #     min_idx_list[-1] = idx
+                        #     min_val = mult_val
+                        if (not len(min_idx_list) or idx >= min_idx_list[-1] + 3) and max(hill.intensity[0:idx-1]) >= 1.5 * max(hill.intensity[0], hill.intensity[idx-1]) and max(hill.intensity[idx:]) >= 1.5 * max(hill.intensity[idx], hill.intensity[-1]):
                             min_idx_list.append(idx)
                             min_val = mult_val
-                        elif mult_val < min_val:
+                        elif (mult_val < min_val) and max(hill.intensity[0:idx-1]) >= 1.5 * max(hill.intensity[0], hill.intensity[idx-1]) and max(hill.intensity[idx:]) >= 1.5 * max(hill.intensity[idx], hill.intensity[-1]):
                             min_idx_list[-1] = idx
                             min_val = mult_val
                     idx += 1
@@ -705,21 +731,26 @@ class peak:
             idx = 3
             # min_idx = False
             min_idx_list = []
-            min_val = 1.0
+            min_val = 0
+            l_idx = 0
             while idx <= c_len:
-                l_r = float(smothed_intensity[idx]) / \
-                    max(smothed_intensity[:idx])
-                r_r = float(smothed_intensity[idx]) / \
-                    max(smothed_intensity[idx:])
+
+                if len(min_idx_list) and idx >= min_idx_list[-1] + 3:
+                    l_idx = min_idx_list[-1]
+
+                l_r = max(smothed_intensity[l_idx:idx]) / float(smothed_intensity[idx])
+                    
+                r_r = max(smothed_intensity[idx:]) / float(smothed_intensity[idx])
+                    
             #     print(l_r, r_r)
-                if l_r < hillValleyFactor and r_r < hillValleyFactor:
+                if l_r >= hillValleyFactor and r_r >= hillValleyFactor:
                     mult_val = l_r * r_r
                     # if mult_val < min_val:
                     #     min_val = mult_val
                     if not len(min_idx_list) or idx >= min_idx_list[-1] + 3:
                         min_idx_list.append(idx)
                         min_val = mult_val
-                    elif mult_val < min_val:
+                    elif mult_val > min_val:
                         min_idx_list[-1] = idx
                         min_val = mult_val
                         # min_idx = idx
@@ -764,12 +795,39 @@ class peak:
 
 class feature:
 
-    def __init__(self, finished_hills, each, each_id, negative_mode):
+    def __init__(self, finished_hills, each, each_id, negative_mode, isotopes_mass_error_map):
 
         self.charge = each[1][0][1]
         self.shift = each[3]
         # self.mz = finished_hills[each[0]].mz
-        self.mz = np.median(finished_hills[each[0]].mass)
+
+        # a_cus = 0.0033946045716987906 / 1000
+        # b_cus = -1.8123641799696435
+
+        mass_for_average2 = [np.average(finished_hills[each[0]].mass, weights=finished_hills[each[0]].intensity)]
+        intensity_for_average2 = [finished_hills[each[0]].max_intensity, ]
+
+        # for i_numb, ech in enumerate(each[1]):
+        #     mass_for_average2.append(np.average(finished_hills[ech[0]].mass, weights=finished_hills[ech[0]].intensity) - (i_numb+1)*1.00335/ech[1])
+        #     intensity_for_average2.append(finished_hills[ech[0]].max_intensity)
+
+        # mass_for_average2 = [zm * (1 - 1e-6 * (a_cus * zi + b_cus)) for zm, zi in zip(mass_for_average2, intensity_for_average2)]
+        self.mz = np.average(mass_for_average2, weights=intensity_for_average2)
+
+
+        # mass_for_average = finished_hills[each[0]].mass + list(itertools.chain.from_iterable([(z * (1 - 1e-6 * isotopes_mass_error_map[i_numb+1][0]) - (i_numb+1)*1.00335/ech[1]) for z in finished_hills[ech[0]].mass] for i_numb, ech in enumerate(each[1])))
+        # # mass_for_average = finished_hills[each[0]].mass + list(itertools.chain.from_iterable([(z - (i_numb+1)*1.00335/ech[1]) for z in finished_hills[ech[0]].mass] for i_numb, ech in enumerate(each[1])))
+        intensity_for_average = finished_hills[each[0]].intensity + list(itertools.chain.from_iterable(finished_hills[ech[0]].intensity for ech in each[1]))
+        # # mass_for_average = [zm * (1 - 1e-6 * (a_cus * zi + b_cus)) for zm, zi in zip(mass_for_average, intensity_for_average)]
+        # scans_for_average = finished_hills[each[0]].scan_id + list(itertools.chain.from_iterable(finished_hills[ech[0]].scan_id for ech in each[1]))
+        # # print(mass_for_average, intensity_for_average)
+        # self.mz = np.average(mass_for_average, weights=intensity_for_average)
+        # # self.mz = np.median(mass_for_average)
+
+        scans_for_average = finished_hills[each[0]].scan_id + list(itertools.chain.from_iterable(finished_hills[ech[0]].scan_id for ech in each[1]))
+
+
+        # self.mz = np.median(finished_hills[each[0]].mass)
         # self.mz = np.mean(finished_hills[each[0]].mass)
         self.negative_mode = negative_mode
 
@@ -787,6 +845,12 @@ class feature:
         self.id_for_scan = finished_hills[each[0]].intensity.index(
             max(finished_hills[each[0]].intensity))
         self.intensity = finished_hills[each[0]].max_intensity
+
+        # self.mz = self.mz * (1 - 1e-6 * (a_cus * max(intensity_for_average2) + b_cus))
+
+        # self.id_for_scan = intensity_for_average.index(
+        #     max(intensity_for_average))
+        # self.intensity = max(intensity_for_average)
         self.idict = finished_hills[each[0]].idict
         self.sqrt_of_i_sum_squares = math.sqrt(
             sum(v**2 for v in self.idict.values()))
@@ -796,10 +860,13 @@ class feature:
         else:
             self.ion_mobility = None
 
-        self.scan_id = finished_hills[each[0]].scan_id[self.id_for_scan]
-        # self.scan_id = finished_hills[each[0]]
-        self.RT = self.scan_numb
-        self.sulfur = (1 if each[2] else 0)
+        # self.scan_id = scans_for_average[self.id_for_scan]
+        # self.scan_id = finished_hills[each[0]].scan_id[self.id_for_scan]
+        # self.RT = self.scan_numb
+        self.scan_id = int(np.average(scans_for_average, weights=intensity_for_average))
+        self.RT = int(np.average(scans_for_average, weights=intensity_for_average))
+        # self.sulfur = (1 if each[2] else 0)
+        self.sulfur = (each[1][1][4] if len(each[1]) > 1 else -1)
         self.cos_corr = each[4][0]
         self.cos_corr_2 = each[4][1]
         self.corr_fill_zero = each[4][2]

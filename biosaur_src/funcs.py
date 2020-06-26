@@ -1,6 +1,9 @@
 from . import classes
 import numpy as np
 from scipy.stats import binom
+from scipy.stats import scoreatpercentile
+from scipy.optimize import curve_fit
+import operator
 import math
 from multiprocessing import Queue, Process, cpu_count
 import logging
@@ -10,24 +13,24 @@ logging.basicConfig(format=u'%(filename)s[LINE:%(lineno)d]#\
 %(levelname)-8s [%(asctime)s] %(message)s', level=logging.DEBUG)
 
 
-def check_its_ready(id_real, peak, check_degree):
+# def check_its_ready(id_real, peak, check_degree):
 
-    mz_list = peak.mz_array
-    scan_list = peak.scan_id
+#     mz_list = peak.mz_array
+#     scan_list = peak.scan_id
 
-    for i in range(len(mz_list)):
-        if id_real - scan_list[i][-1] > check_degree:
+#     for i in range(len(mz_list)):
+#         if id_real - scan_list[i][-1] > check_degree:
 
-            tmp_ready_hill = classes.ready_hill(
-                intensity=peak.intensity.pop(i),
-                scan_id=peak.scan_id.pop(i),
-                mass=peak.mass_array.pop(i),
-                mz=peak.mz_array.pop(i))
+#             tmp_ready_hill = classes.ready_hill(
+#                 intensity=peak.intensity.pop(i),
+#                 scan_id=peak.scan_id.pop(i),
+#                 mass=peak.mass_array.pop(i),
+#                 mz=peak.mz_array.pop(i))
 
-            peak.finished_hills.append(tmp_ready_hill)
+#             peak.finished_hills.append(tmp_ready_hill)
 
 
-def data_to_features(input_file, max_diff, min_length, proccess_number, start_index, end_index):
+def data_to_features(input_file, max_diff, min_length_hill, proccess_number, start_index, end_index):
 
     # data = mzml.read(input_file)
 
@@ -105,7 +108,7 @@ def data_to_features(input_file, max_diff, min_length, proccess_number, start_in
                 i.get(
                     'mean inverse reduced ion mobility array',
                     None))
-            peak1.push_me_to_the_peak(next_peak_i, max_diff, min_length)
+            peak1.push_me_to_the_peak(next_peak_i, max_diff, min_length_hill)
             RT_dict[i['index']] = float(
                 i['scanList']['scan'][0]['scan start time'])
         # if k > 10:
@@ -113,7 +116,19 @@ def data_to_features(input_file, max_diff, min_length, proccess_number, start_in
             # pass
         k += 1
     # print(peak1.mz_array)
-    peak1.push_left(min_length=min_length)
+    peak1.push_left(min_length=min_length_hill)
+
+    # print(sorted(RT_dict.keys()))
+
+    # # print(peak1.medar)
+    # peak1.medar = np.array(peak1.medar)
+    # peak1.medar = np.cumprod(peak1.medar)
+
+    # for idx in range(len(peak1.finished_hills)):
+    #     tmp_mass = [mv * peak1.medar[sv-1] for mv, sv in zip(peak1.finished_hills[idx].mass, peak1.finished_hills[idx].scan_id)]
+    #     peak1.finished_hills[idx].mass = tmp_mass
+    #     peak1.finished_hills[idx].mz = np.median(tmp_mass)
+
     logging.info(
         u'Data converted to features with process /' +
         str(proccess_number + 1) + '/ --->')
@@ -163,13 +178,15 @@ def cos_correlation_new(theoretical_list, experimental_list, shf):
     for i1, i2 in zip(theoretical_list, experimental_list):
         top += i1 * i2
 
-    return top / bottom, sum(theoretical_list) / theor_total_sum
+    averagineExplained = sum(theoretical_list) / theor_total_sum
+
+    return top / bottom, averagineExplained
 
 
 def cos_correlation_fill_zeroes(hill_1, hill_2):
 
     inter_set = hill_1.scan_set.intersection(hill_2.scan_set)
-    if len(inter_set) >= 3:
+    if len(inter_set) >= 2:
 
         top = 0
         for i in inter_set:
@@ -208,7 +225,7 @@ def checking_cos_correlation_for_carbon_noshift(
 
             # if averagineExplained < 0.5:
             #     break
-            if averagineCorrelation >= thresh:
+            if averagineExplained >= 0.5 and averagineCorrelation >= thresh:
                 tmp_val = averagineCorrelation * averagineExplained
                 if tmp_val > best_value:
                     best_value = tmp_val
@@ -259,8 +276,8 @@ def checking_cos_correlation_for_carbon(
 
             # if averagineExplained < 0.5:
             #     break
-            if averagineCorrelation >= thresh:
-                tmp_val = averagineCorrelation * averagineExplained
+            if averagineExplained >= 0.5 and averagineCorrelation >= thresh:
+                tmp_val = averagineCorrelation# * averagineExplained
                 if tmp_val > best_value:
                     best_value = tmp_val
                     best_cor = averagineCorrelation
@@ -298,6 +315,7 @@ def iter_hills(
         mass_acc,
         start_index,
         end_index,
+        min_length,
         proccess_number=1):
 
     ready = []
@@ -318,7 +336,16 @@ def iter_hills(
     #     int_arr = binom.pmf(tmplist, i, 0.0425)
     #     s_dict[i] = int_arr
 
-    s_list = [0.9575, 0.0425, 0.0425**2, 0.0425**3]
+    tmplist_s = [1, 2, 3]
+
+    s_list = [1, 2, 3]
+    s_dict = dict()
+
+    for i in s_list:
+        int_arr = binom.pmf(tmplist_s, i, 0.0425)
+        s_dict[i] = int_arr
+
+    # s_list = [0.9575, 0.0425, 0.0425**2, 0.0425**3]
 
     for i in range(100, 20000, 100):
         int_arr = binom.pmf(
@@ -328,7 +355,8 @@ def iter_hills(
             averagine_C,
             0.0107)
         prec_masses.append(i)
-        int_arr_norm = int_arr / int_arr.max()
+        # int_arr_norm = int_arr / int_arr.max()
+        int_arr_norm = int_arr / int_arr.sum()
         # prec_is = np.where(int_arr_norm >= 0.01)[0]
 #         isotopes_int.append(int_arr_norm[prec_is])
 #         prec_minisotopes.append(prec_is.min())
@@ -349,22 +377,14 @@ def iter_hills(
 
     for i in range(start_index, end_index, 1):
 
-        ready_set = set()
-
-        if i not in ready_set:
+        if peak.finished_hills[i].scan_len >= min_length:
 
             peak_1_mz = peak.finished_hills[i].mz
             left_border_i = peak.finished_hills[i].scan_id[0]
             right_border_i = peak.finished_hills[i].scan_id[-1]
-            # middle_index_i = peak.finished_hills[i].scan_of_max_intensity
-            # i_len = peak.finished_hills[i].scan_len
             mz_tol = mass_acc * 1e-6 * peak.finished_hills[i].mz
-            # mz_tol = 5 * peak.finished_hills[i].mz_std
-
 
             for charge in charges:
-
-                ready_set = set()
                 
                 candidates = []
                 s_candidates = []
@@ -389,81 +409,51 @@ def iter_hills(
                     m_to_check = peak_1_mz + (1.00335 * numb / charge)
                     m_to_check_fast = int(m_to_check/0.02)
 
-                    # for j in range(k + 1, size, 1):
                     for j in peak.get_potential_isotope_id(m_to_check_fast, i):
 
-                        if j not in ready_set:
+                        peak_2_mz = peak.finished_hills[j].mz
 
-                            peak_2_mz = peak.finished_hills[j].mz
-                            # left_border_j = (
-                            #                 peak.finished_hills[j].scan_id[0]
-                            #                 - 1)
-                            # right_border_j = (
-                            #                 peak.finished_hills[j].scan_id[-1]
-                            #                 + 1)
-                            # j_len = peak.finished_hills[j].scan_len
+                        diff = peak_2_mz - m_to_check
 
-                            diff = peak_2_mz - m_to_check
+                        if abs(diff) <= mz_tol:
 
-                            # if diff > mz_tol:
-                            #     # print(k)
-                            #     k = j - 1
-                            #     # print(k)
-                            #     break
-                            if abs(diff) <= mz_tol:
+                            cos_cor_test = cos_correlation_fill_zeroes(
+                                                peak.finished_hills[i],
+                                                peak.finished_hills[j])
 
-                                cos_cor_test = cos_correlation_fill_zeroes(
-                                                    peak.finished_hills[i],
-                                                    peak.finished_hills[j])
+                            if cos_cor_test >= 0.6:
 
-                                if cos_cor_test >= 0.7:
+                                tmp_candidates.append((j, charge, cos_cor_test, diff/m_to_check*1e6, 0))
 
-                                    tmp_candidates.append((j, charge, cos_cor_test))
-
-                                    if numb == 1:
-                                        diff_for_output = diff / peak_2_mz
-
-                                    # if len(candidates) < numb:
-
-                                    #     candidates.append((j, charge, cos_cor_test))
-                                    #     if numb == 1:
-                                    #         diff_for_output = diff / peak_2_mz
-
-                                    # else:
-
-                                    #     j_prev = candidates[-1][0]
-                                    #     cos_cor_test_prev = candidates[-1][2]
-                                    #     if cos_cor_test > cos_cor_test_prev:
-                                    #         candidates[-1] = (j, charge, cos_cor_test)
-                                    #         if numb == 1:
-                                    #             diff_for_output = diff / peak_2_mz
+                                if numb == 1:
+                                    diff_for_output = diff / peak_2_mz
 
 
-                                        # intensity2 = (
-                                        #             peak.finished_hills[j]
-                                        #             .max_intensity)
+                    if numb == 2:
 
-                                        # if abs(
-                                        #     peak.finished_hills[j].mz -
-                                        #     (peak.finished_hills[i]
-                                        #         .mz)) < abs(
-                                        #     (peak.finished_hills[j_prev]
-                                        #         .mz) -
-                                        #         peak.finished_hills[i].mz):
-                                        #     candidates[-1] = (j, charge, cos_cor_test)
-                                        #     if numb == 1:
-                                        #         diff_for_output = diff / peak_2_mz
+                        for n_sulf in range(1, 4, 1):
 
-                    # lc = len(candidates)
-                    # if lc < numb:
-                    #     if lc and candidates[-1][1] != 0:
-                    #         candidates.append((0, 0))
-                    #     else:
-                    #         if lc:
-                    #             candidates = candidates[:-1]
-                    #         break
+                            m_to_check2 = peak_1_mz + (1.00335 * (numb - 2) / charge) + (1.9957958999999974 / charge)
 
-                    # if numb % 2 == 0:
+                            sulf_int = s_dict[n_sulf][0]
+                            # sulf_int = 0.0425 * tmp_intensity[numb-2]
+
+                            m_to_check2 = (m_to_check2 * sulf_int + m_to_check * tmp_intensity[numb]) / (sulf_int+tmp_intensity[numb])
+                            m_to_check2_fast = int(m_to_check2/0.02)
+                            # print(m_to_check, m_to_check2)
+
+                            for j in peak.get_potential_isotope_id(m_to_check2_fast, i):
+                                if j not in ready_set:
+                                    peak_2_mz = peak.finished_hills[j].mz
+                                    diff = peak_2_mz - m_to_check2
+                                    if abs(diff) <= mz_tol:
+                                        cos_cor_test = cos_correlation_fill_zeroes(
+                                                            peak.finished_hills[i],
+                                                            peak.finished_hills[j])
+                                        if cos_cor_test >= 0.6:
+                                            tmp_candidates.append((j, charge, cos_cor_test, diff/m_to_check2*1e6, n_sulf))
+
+
                     if numb == 2:
 
                         m_to_check = peak_1_mz + \
@@ -488,9 +478,9 @@ def iter_hills(
                                     s_cos_cor = cos_correlation_fill_zeroes(
                                             peak.finished_hills[i],
                                             peak.finished_hills[j])
-                                    if s_cos_cor >= 0.7:
+                                    if s_cos_cor >= 0.6:
 
-                                        tmp_s_candidates.append([j, charge, s_cos_cor])
+                                        tmp_s_candidates.append([j, charge, s_cos_cor, diff/m_to_check*1e6])
 
                                         # if len(s_candidates) < numb / 2:
 
@@ -563,6 +553,21 @@ def iter_hills(
                             s_candidates = []
 
                     for iter_candidates in itertools.product(*candidates):
+                        # if len(iter_candidates) > 1:
+                        #     basic_sulfur = iter_candidates[1][4]
+                        # else:
+                        #     basic_sulfur = 0
+                        # # print(basic_sulfur)
+                        # iter_candidates_new = []
+                        # for z_idx, z in enumerate(iter_candidates):
+                        #     if z_idx > 0:
+                        #         if z[4] == basic_sulfur:
+                        #             iter_candidates_new.append(z)
+                        #         else:
+                        #             break
+                        #     else:
+                        #         iter_candidates_new.append(z)
+                        # iter_candidates = iter_candidates_new
 
                         all_theoretical_int = [
                             peak.finished_hills[i].max_intensity *
@@ -649,7 +654,7 @@ def worker_data_to_features(
         start_index,
         end_index,
         mass_accuracy,
-        min_length, proccess_number):
+        min_length_hill, proccess_number):
 
     start_index = start_index * (1 - 1e-6 * 2 * mass_accuracy)
     end_index = end_index * (1 + 1e-6 * 2 * end_index)
@@ -657,7 +662,7 @@ def worker_data_to_features(
     result_peak, result_RT_dict = data_to_features(
         data_for_analyse,
         mass_accuracy,
-        min_length,
+        min_length_hill,
         proccess_number,
         start_index,
         end_index
@@ -673,7 +678,7 @@ def boosting_firststep_with_processes(
         number_of_processes,
         data_for_analyse,
         mass_accuracy,
-        min_length,
+        min_length_hill,
         data_start_index=0):
 
     for idx, v in enumerate(data_for_analyse):
@@ -690,7 +695,7 @@ def boosting_firststep_with_processes(
     if number_of_processes == 1:
 
         result_peak, result_RT_dict = data_to_features(
-            data_for_analyse, mass_accuracy, min_length, 1, 0, 2500)
+            data_for_analyse, mass_accuracy, min_length_hill, 1, 0, 2500)
 
     else:
         qout = Queue()
@@ -716,7 +721,7 @@ def boosting_firststep_with_processes(
                     start_mz,
                     step + start_mz,
                     mass_accuracy,
-                    min_length, i))
+                    min_length_hill, i))
             # print(start_index)
             p.start()
             procs.append(p)
@@ -765,6 +770,7 @@ def worker_iter_hills(
         max_charge,
         min_intensity,
         mass_accuracy,
+        min_length,
         proccess_number
         ):
 
@@ -776,6 +782,7 @@ def worker_iter_hills(
         mass_accuracy,
         start_index,
         end_index,
+        min_length,
         proccess_number)
 
     if result_q:
@@ -784,13 +791,30 @@ def worker_iter_hills(
     qout.put(None)
 
 
+def noisygaus(x, a, x0, sigma, b):
+    return a * np.exp(-(x - x0) ** 2 / (2 * sigma ** 2)) + b
+
+def calibrate_mass(bwidth, mass_left, mass_right, true_md):
+
+    bbins = np.arange(-mass_left, mass_right, bwidth)
+    H1, b1 = np.histogram(true_md, bins=bbins)
+    b1 = b1 + bwidth
+    b1 = b1[:-1]
+
+    popt, pcov = curve_fit(noisygaus, b1, H1, p0=[1, np.median(true_md), 1, 1])
+    mass_shift, mass_sigma = popt[1], abs(popt[2])
+    return mass_shift, mass_sigma, pcov[0][0]
+
+
+
 def boosting_secondstep_with_processes(
         number_of_processes,
         peak,
         min_charge,
         max_charge,
         min_intensity,
-        mass_accuracy):
+        mass_accuracy,
+        min_length):
 
     if number_of_processes == 0:
 
@@ -804,7 +828,7 @@ def boosting_secondstep_with_processes(
 
         result_q = iter_hills(
             peak, min_charge, max_charge, min_intensity, mass_accuracy, 0, len(
-                peak.finished_hills))
+                peak.finished_hills), min_length)
 
     else:
         qout = Queue()
@@ -831,6 +855,7 @@ def boosting_secondstep_with_processes(
                     max_charge,
                     min_intensity,
                     mass_accuracy,
+                    min_length,
                     i))
             # print(start_index)
             p.start()
@@ -852,20 +877,136 @@ def boosting_secondstep_with_processes(
     ready_final = []
     ready_set = set()
 
+    import pickle
+    pickle.dump(ready, open('ready.pickle', 'wb'))
+
+    isotopes_mass_error_map = {}
+    for ic in range(1, 10, 1):
+        isotopes_mass_error_map[ic] = []
     for pep_feature in ready:
+        for icc, cand in enumerate(pep_feature[1]):
+            if icc != 1 or cand[4] == 0:
+                isotopes_mass_error_map[icc+1].append(cand[3])
+    for ic in range(1, 10, 1):
+        if len(isotopes_mass_error_map[ic]) >= 1000:
+
+            true_md = np.array(isotopes_mass_error_map[ic])
+
+            mass_left = -min(isotopes_mass_error_map[ic])
+            mass_right = max(isotopes_mass_error_map[ic])
+
+            try:
+                mass_shift, mass_sigma, covvalue = calibrate_mass(0.01, mass_left, mass_right, true_md)
+            except:
+                mass_shift, mass_sigma, covvalue = calibrate_mass(0.05, mass_left, mass_right, true_md)
+            if np.isinf(covvalue):
+                mass_shift, mass_sigma, covvalue = calibrate_mass(0.05, mass_left, mass_right, true_md)
+            
+            isotopes_mass_error_map[ic] = [mass_shift, mass_sigma]
+        else:
+            isotopes_mass_error_map[ic] = isotopes_mass_error_map[ic-1]
+    # print(isotopes_mass_error_map)
+
+    for pfidx, pep_feature in enumerate(ready):
+        allowed_idx = 1
+        for icc, cand in enumerate(pep_feature[1]):
+            if abs(cand[3] - isotopes_mass_error_map[icc+1][0])/isotopes_mass_error_map[icc+1][1] <= 5 or (icc == 1 and cand[4] > 0):
+                allowed_idx += 1
+            else:
+                break
+
+
+        all_theoretical_int, all_exp_intensity = pep_feature[5]
+        all_theoretical_int = all_theoretical_int[:allowed_idx]
+        all_exp_intensity = all_exp_intensity[:allowed_idx]
+
+        ready[pfidx][1] = ready[pfidx][1][:allowed_idx]
+        ready[pfidx][5] = [all_theoretical_int, all_exp_intensity]
+    
+        ready[pfidx].append(min(checking_cos_correlation_for_carbon(
+                        all_theoretical_int, all_exp_intensity, 0.6)[0], 0.99999999))
+        
+    
+    # ready = sorted(ready, key=lambda x: -x[-1])
+    ready = sorted(ready, key=lambda x: -len(x[-2][0])-x[-1])
+    # ready = sorted(ready, key=lambda x: -len(x[-2][0]))
+
+    # for pep_feature in ready:
+    #     if pep_feature[0] not in ready_set:
+    #         if not any(cand[0] in ready_set for cand in pep_feature[1]):
+    #             ready_final.append(pep_feature)
+    #             ready_set.add(pep_feature[0])
+    #             for cand in pep_feature[1]:
+    #                 ready_set.add(cand[0])
+    #             # for s_cand in pep_feature[2]:
+    #             #     if s_cand[0] not in ready_set:
+    #             #         ready_set.add(s_cand[0])
+    #             #         break
+
+    #         else:
+    #             tmp = []
+    #             for cand in pep_feature[1]:
+    #                 if cand[0] not in ready_set:
+    #                     tmp.append(cand)
+    #                 else:
+    #                     break
+    #             if len(tmp):
+    #                 pep_feature[1] = tmp
+    #                 all_theoretical_int, all_exp_intensity = pep_feature[5]
+    #                 all_theoretical_int = all_theoretical_int[:len(tmp)]
+    #                 all_exp_intensity = all_exp_intensity[:len(tmp)]
+    #                 (cos_corr,
+    #                         number_of_passed_isotopes,
+    #                         shift) = checking_cos_correlation_for_carbon(
+    #                         all_theoretical_int, all_exp_intensity, 0.6)
+
+    #                 if cos_corr:
+    #                     ready_final.append(pep_feature)
+    #                     ready_set.add(pep_feature[0])
+    #                     for cand in pep_feature[1]:
+    #                         ready_set.add(cand[0])
+    #                     # for s_cand in pep_feature[2]:
+    #                     #     if s_cand[0] not in ready_set:
+    #                     #         ready_set.add(s_cand[0])
+    #                     #         break
+    max_l = len(ready)
+    cur_l = 0
+
+    ready_final = []
+    ready_set = set()
+
+    ready = sorted(ready, key=lambda x: -len(x[-2][0])-x[-1])
+    cur_isotopes = len(ready[0][-2][0])
+
+    cnt_mark = 0
+
+    while cur_l < max_l:
+        cnt_mark += 1
+    #     if cnt_mark > 1000:
+    #         break
+        pep_feature = ready[cur_l]
+        # print(cur_l, max_l, cur_isotopes, len(ready_final), -len(pep_feature[-2][0])-pep_feature[-1])
+        n_iso = len(pep_feature[-2][0])
+        if n_iso < cur_isotopes:
+            ready = sorted(ready, key=lambda x: -len(x[-2][0]))
+            cur_isotopes = n_iso
+            cur_l = 0
+            
         if pep_feature[0] not in ready_set:
             if not any(cand[0] in ready_set for cand in pep_feature[1]):
                 ready_final.append(pep_feature)
                 ready_set.add(pep_feature[0])
                 for cand in pep_feature[1]:
                     ready_set.add(cand[0])
-                for s_cand in pep_feature[2]:
-                    if s_cand[0] not in ready_set:
-                        ready_set.add(s_cand[0])
-                        break
+                del ready[cur_l]
+                max_l -= 1
+                cur_l -= 1
 
             else:
                 tmp = []
+                
+    #             cur_isotopes = len(pep_feature[1])
+                
                 for cand in pep_feature[1]:
                     if cand[0] not in ready_set:
                         tmp.append(cand)
@@ -878,20 +1019,42 @@ def boosting_secondstep_with_processes(
                     all_exp_intensity = all_exp_intensity[:len(tmp)]
                     (cos_corr,
                             number_of_passed_isotopes,
-                            shift) = checking_cos_correlation_for_carbon_noshift(
+                            shift) = checking_cos_correlation_for_carbon(
                             all_theoretical_int, all_exp_intensity, 0.6)
-
                     if cos_corr:
-                        ready_final.append(pep_feature)
-                        ready_set.add(pep_feature[0])
-                        for cand in pep_feature[1]:
-                            ready_set.add(cand[0])
-                        for s_cand in pep_feature[2]:
-                            if s_cand[0] not in ready_set:
-                                ready_set.add(s_cand[0])
-                                break
+                        ready[cur_l] = [pep_feature[0],
+                                        pep_feature[1],
+                                        pep_feature[2],
+                                        pep_feature[3],
+                                        pep_feature[4],
+                                        [all_theoretical_int, all_exp_intensity],
+                                        cos_corr]
 
-    return ready_final
+                    
+                    else:
+                        del ready[cur_l]
+                        max_l -= 1
+                        cur_l -= 1
+                    
+                    
+                else:
+                    del ready[cur_l]
+                    max_l -= 1
+                    cur_l -= 1
+        else:
+            del ready[cur_l]
+            max_l -= 1
+            cur_l -= 1
+
+
+    #                 ready = ready[:cur_l] + sorted(ready[cur_l:], key=lambda x: -len(x[-2][0])-x[-1])
+
+    #                 cur_l -= 1
+        cur_l += 1
+        
+
+
+    return ready_final, isotopes_mass_error_map
 
 #FIXME исправить функцию для подсчета по списку необходимых индексов 
 def func_for_correlation_matrix(set_of_features):
