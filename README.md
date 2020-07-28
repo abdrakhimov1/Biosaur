@@ -17,6 +17,11 @@
 <!-- PROJECT LOGO -->
 <br />
 <p align="center">
+  [![Contributors][contributors-shield]][contributors-url]
+  [![Forks][forks-shield]][forks-url]
+  [![Stargazers][stars-shield]][stars-url]
+  [![Issues][issues-shield]][issues-url]
+  [![MIT License][license-shield]][license-url]
   <a href="https://github.com/abdrakhimov1/Biosaur">
     <img src="logo.png" alt="Logo" width="506" height="222">
   </a>
