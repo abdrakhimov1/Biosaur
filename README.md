@@ -18,7 +18,7 @@
 <br />
 <p align="center">
   <a href="https://github.com/abdrakhimov1/Biosaur">
-    <img src="logo.png" alt="Logo" width="80" height="80">
+    <img src="logo.png" alt="Logo" width="130" height="80">
   </a>
 
   <h3 align="center">Biosaur</h3>
@@ -148,8 +148,8 @@ Distributed under the Apache 2.0 License. See `LICENSE` for more information.
 <!-- CONTACT -->
 ## Contact
 
-Abdrakhimov Daniil - [@abdrakhimov1](https://t.me/abdrakhimov1) - dan.abdrakhimov@yandex.ru
-Ivanov Mark
+* Abdrakhimov Daniil - [@abdrakhimov1](https://t.me/abdrakhimov1) - dan.abdrakhimov@yandex.ru
+* Ivanov Mark - [@markmipt](https://t.me/markmipt) - email@example.com
 
 Project Link: [https://github.com/abdrakhimov1/Biosaur](https://github.com/abdrakhimov1/Biosaur)
 
