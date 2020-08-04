@@ -149,7 +149,7 @@ Distributed under the Apache 2.0 License. See `LICENSE` for more information.
 ## Contact
 
 * Abdrakhimov Daniil - [@abdrakhimov1](https://t.me/abdrakhimov1) - dan.abdrakhimov@yandex.ru
-* Ivanov Mark - [@markmipt](https://t.me/markmipt) - email@example.com
+* Ivanov Mark - [@markmipt](https://t.me/markmipt) - markmipt@gmail.com
 
 Project Link: [https://github.com/abdrakhimov1/Biosaur](https://github.com/abdrakhimov1/Biosaur)
 
