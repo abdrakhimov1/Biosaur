@@ -91,6 +91,12 @@ limitations under the License. \n', 'yellow'))
         type=int,
         default=3)
     parser.add_argument(
+        '-minlh',
+        '--min_length_hill',
+        help='Minimum length for hill',
+        type=int,
+        default=2)
+    parser.add_argument(
         '-mini',
         '--min_intensity',
         type=float,
@@ -101,7 +107,7 @@ limitations under the License. \n', 'yellow'))
         '--hill_valley_factor',
         help='Hill Valley Factor',
         type=float,
-        default=0.8)
+        default=1.3)
     parser.add_argument(
         '--debug',
         action='store_true',
