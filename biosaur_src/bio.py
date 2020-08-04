@@ -167,9 +167,6 @@ def process_files(args):
             ' processes...')
 
         # test_peak.crosslink_simple(mass_accuracy)
-        logging.info(
-            str(len(test_peak.finished_hills)) +
-            u' hills were detected...')
         # print(
         #     "Timer: " +
         #     str(round((time.time() - start_time) / 60, 1)) + " minutes.")
