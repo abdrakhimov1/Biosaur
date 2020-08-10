@@ -50,8 +50,16 @@ def process_files(args):
                 z['m/z array'] = z['m/z array'][idx]
                 if 'mean inverse reduced ion mobility array' in z:
                     z['mean inverse reduced ion mobility array'] = z['mean inverse reduced ion mobility array'][idx]
+
+                idx = np.argsort(z['m/z array'])
+                z['m/z array'] = z['m/z array'][idx]
+                z['intensity array'] = z['intensity array'][idx]
+                if 'mean inverse reduced ion mobility array' in z:
+                    z['mean inverse reduced ion mobility array'] = z['mean inverse reduced ion mobility array'][idx]
+
+
                 data_for_analyse.append(z)
-                # if len(data_for_analyse) > 500:
+                # if len(data_for_analyse) > 50:
                 #     break
 
     logging.info(u'Number of MS1 scans: ' + str(len(data_for_analyse)))

@@ -51,13 +51,13 @@ def data_to_features(input_file, max_diff, min_length_hill, proccess_number, sta
                     i['m/z array'],
                     i['intensity array'],
                     i['mean inverse reduced ion mobility array']):
-                if intensity >= 300:
-                    if not peak_ion_mobility_object:
-                        peak_ion_mobility_object = classes.peak_ion_mobility(
-                            mz, intensity, ion_mobility)
-                    else:
-                        peak_ion_mobility_object.push_me_to_the_peak(
-                            mz, intensity, ion_mobility, max_diff)
+                # if intensity >= 300:
+                if not peak_ion_mobility_object:
+                    peak_ion_mobility_object = classes.peak_ion_mobility(
+                        mz, intensity, ion_mobility)
+                else:
+                    peak_ion_mobility_object.push_me_to_the_peak(
+                        mz, intensity, ion_mobility, max_diff)
             input_file[idx]['m/z array'] = np.array(
                 peak_ion_mobility_object.mz_array)
             input_file[idx]['intensity array'] = np.array(
@@ -67,13 +67,6 @@ def data_to_features(input_file, max_diff, min_length_hill, proccess_number, sta
                 peak_ion_mobility_object.ion_mobility_opt)
         # if idx > 10:
         #     break
-    # print(len(peak_ion_mobility_object.mz_array))
-    # print(len(i['m/z array']))
-    # print(len(input_file[0]['m/z array']))
-
-    # print(input_file[0]['m/z array'])
-    # print(input_file[0]['intensity array'])
-    # print('HERE')
 
     RT_dict = dict()
 
@@ -81,7 +74,6 @@ def data_to_features(input_file, max_diff, min_length_hill, proccess_number, sta
     # print(len(input_file))
 
     for i in input_file:
-        # print(i)
         idx = (i['m/z array'] >= start_index) & (i['m/z array'] < end_index)
         # (dists >= r) & (dists <= r+dr)
         i['m/z array'] = i['m/z array'][idx]
@@ -115,12 +107,7 @@ def data_to_features(input_file, max_diff, min_length_hill, proccess_number, sta
             # break
             # pass
         k += 1
-    # print(peak1.mz_array)
     peak1.push_left(min_length=min_length_hill)
-
-    # print(sorted(RT_dict.keys()))
-
-    # # print(peak1.medar)
     # peak1.medar = np.array(peak1.medar)
     # peak1.medar = np.cumprod(peak1.medar)
 
@@ -132,7 +119,6 @@ def data_to_features(input_file, max_diff, min_length_hill, proccess_number, sta
     logging.info(
         u'Data converted to features with process /' +
         str(proccess_number + 1) + '/ --->')
-    # print(peak1.mz_array)
     return peak1, RT_dict
 
 
@@ -415,7 +401,7 @@ def iter_hills(
 
                         diff = peak_2_mz - m_to_check
 
-                        if abs(diff) <= mz_tol:
+                        if abs(diff) <= mz_tol and (peak.finished_hills[i].opt_ion_mobility is None or abs(peak.finished_hills[i].opt_ion_mobility-peak.finished_hills[j].opt_ion_mobility) <= 0.01):
 
                             cos_cor_test = cos_correlation_fill_zeroes(
                                                 peak.finished_hills[i],
@@ -429,29 +415,29 @@ def iter_hills(
                                     diff_for_output = diff / peak_2_mz
 
 
-                    if numb == 2:
+                    # if numb == 2:
 
-                        for n_sulf in range(1, 4, 1):
+                    #     for n_sulf in range(1, 4, 1):
 
-                            m_to_check2 = peak_1_mz + (1.00335 * (numb - 2) / charge) + (1.9957958999999974 / charge)
+                    #         m_to_check2 = peak_1_mz + (1.00335 * (numb - 2) / charge) + (1.9957958999999974 / charge)
 
-                            sulf_int = s_dict[n_sulf][0]
-                            # sulf_int = 0.0425 * tmp_intensity[numb-2]
+                    #         sulf_int = s_dict[n_sulf][0]
+                    #         # sulf_int = 0.0425 * tmp_intensity[numb-2]
 
-                            m_to_check2 = (m_to_check2 * sulf_int + m_to_check * tmp_intensity[numb]) / (sulf_int+tmp_intensity[numb])
-                            m_to_check2_fast = int(m_to_check2/0.02)
-                            # print(m_to_check, m_to_check2)
+                    #         m_to_check2 = (m_to_check2 * sulf_int + m_to_check * tmp_intensity[numb]) / (sulf_int+tmp_intensity[numb])
+                    #         m_to_check2_fast = int(m_to_check2/0.02)
+                    #         # print(m_to_check, m_to_check2)
 
-                            for j in peak.get_potential_isotope_id(m_to_check2_fast, i):
-                                if j not in ready_set:
-                                    peak_2_mz = peak.finished_hills[j].mz
-                                    diff = peak_2_mz - m_to_check2
-                                    if abs(diff) <= mz_tol:
-                                        cos_cor_test = cos_correlation_fill_zeroes(
-                                                            peak.finished_hills[i],
-                                                            peak.finished_hills[j])
-                                        if cos_cor_test >= 0.6:
-                                            tmp_candidates.append((j, charge, cos_cor_test, diff/m_to_check2*1e6, n_sulf))
+                    #         for j in peak.get_potential_isotope_id(m_to_check2_fast, i):
+                    #             if j not in ready_set and (peak.finished_hills[i].opt_ion_mobility is None or abs(peak.finished_hills[i].opt_ion_mobility-peak.finished_hills[j].opt_ion_mobility) <= 0.01):
+                    #                 peak_2_mz = peak.finished_hills[j].mz
+                    #                 diff = peak_2_mz - m_to_check2
+                    #                 if abs(diff) <= mz_tol:
+                    #                     cos_cor_test = cos_correlation_fill_zeroes(
+                    #                                         peak.finished_hills[i],
+                    #                                         peak.finished_hills[j])
+                    #                     if cos_cor_test >= 0.6:
+                    #                         tmp_candidates.append((j, charge, cos_cor_test, diff/m_to_check2*1e6, n_sulf))
 
 
                     if numb == 2:
@@ -620,7 +606,6 @@ def iter_hills(
                                     scan_id_2,
                                     mz_std_2],
                                     [all_theoretical_int, all_exp_intensity]])
-
                             # ready_set.add(i)
                             # for ic in candidates:
                             #     if ic[1] != 0:
@@ -877,8 +862,8 @@ def boosting_secondstep_with_processes(
     ready_final = []
     ready_set = set()
 
-    import pickle
-    pickle.dump(ready, open('ready.pickle', 'wb'))
+    # import pickle
+    # pickle.dump(ready, open('ready.pickle', 'wb'))
 
     isotopes_mass_error_map = {}
     for ic in range(1, 10, 1):
@@ -890,19 +875,28 @@ def boosting_secondstep_with_processes(
     for ic in range(1, 10, 1):
         if len(isotopes_mass_error_map[ic]) >= 1000:
 
-            true_md = np.array(isotopes_mass_error_map[ic])
-
-            mass_left = -min(isotopes_mass_error_map[ic])
-            mass_right = max(isotopes_mass_error_map[ic])
-
             try:
-                mass_shift, mass_sigma, covvalue = calibrate_mass(0.01, mass_left, mass_right, true_md)
+
+                true_md = np.array(isotopes_mass_error_map[ic])
+
+                mass_left = -min(isotopes_mass_error_map[ic])
+                mass_right = max(isotopes_mass_error_map[ic])
+
+                try:
+                    mass_shift, mass_sigma, covvalue = calibrate_mass(0.01, mass_left, mass_right, true_md)
+                except:
+                    try:
+                        mass_shift, mass_sigma, covvalue = calibrate_mass(0.05, mass_left, mass_right, true_md)
+                    except:
+                        mass_shift, mass_sigma, covvalue = calibrate_mass(0.25, mass_left, mass_right, true_md)
+                if np.isinf(covvalue):
+                    mass_shift, mass_sigma, covvalue = calibrate_mass(0.05, mass_left, mass_right, true_md)
+                
+                isotopes_mass_error_map[ic] = [mass_shift, mass_sigma]
+
             except:
-                mass_shift, mass_sigma, covvalue = calibrate_mass(0.05, mass_left, mass_right, true_md)
-            if np.isinf(covvalue):
-                mass_shift, mass_sigma, covvalue = calibrate_mass(0.05, mass_left, mass_right, true_md)
-            
-            isotopes_mass_error_map[ic] = [mass_shift, mass_sigma]
+                isotopes_mass_error_map[ic] = isotopes_mass_error_map[ic-1]
+
         else:
             isotopes_mass_error_map[ic] = isotopes_mass_error_map[ic-1]
     # print(isotopes_mass_error_map)
