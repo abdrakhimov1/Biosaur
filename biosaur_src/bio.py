@@ -168,9 +168,6 @@ def process_files(args):
         # test_peak.crosslink(mass_accuracy)
         # test_peak.cutting_down(0.5)
         logging.info(u'All data converted to hills...')
-        logging.info(
-            str(len(test_peak.finished_hills)) +
-            u' hills were detected...')
         logging.info('Processing hills...')
         logging.info(
             'Your hills proccesing with ' +
@@ -178,9 +175,6 @@ def process_files(args):
             ' processes...')
 
         # test_peak.crosslink_simple(mass_accuracy)
-        logging.info(
-            str(len(test_peak.finished_hills)) +
-            u' hills were detected...')
         # print(
         #     "Timer: " +
         #     str(round((time.time() - start_time) / 60, 1)) + " minutes.")
