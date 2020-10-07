@@ -811,7 +811,7 @@ def boosting_secondstep_with_processes(
 
     if number_of_processes == 1:
 
-        result_q = iter_hills(
+        ready = iter_hills(
             peak, min_charge, max_charge, min_intensity, mass_accuracy, 0, len(
                 peak.finished_hills), min_length)
 
