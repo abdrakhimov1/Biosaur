@@ -158,15 +158,19 @@ def cos_correlation_new(theoretical_list, experimental_list, shf):
 
     top = 0
 
-    bottom = math.sqrt(sum([numb * numb for numb in theoretical_list])) * \
-        math.sqrt(sum([numb * numb for numb in experimental_list]))
-
     for i1, i2 in zip(theoretical_list, experimental_list):
         top += i1 * i2
 
-    averagineExplained = sum(theoretical_list) / theor_total_sum
+    if not top:
+        return 0, 0
+    else:
 
-    return top / bottom, averagineExplained
+        bottom = math.sqrt(sum([numb * numb for numb in theoretical_list])) * \
+            math.sqrt(sum([numb * numb for numb in experimental_list]))
+
+        averagineExplained = sum(theoretical_list) / theor_total_sum
+
+        return top / bottom, averagineExplained
 
 
 def cos_correlation_fill_zeroes(hill_1, hill_2):
