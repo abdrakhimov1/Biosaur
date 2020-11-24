@@ -1,6 +1,7 @@
 import time
 from os import path
 from pyteomics import mzml
+from pyteomics import pepxml
 import numpy as np
 from . import funcs
 from . import classes
@@ -20,6 +21,7 @@ def process_files(args):
     min_charge = args['min_charge']
     max_charge = args['max_charge']
     min_intensity = args['min_intensity']
+    pep_xml_file_path = args['pep_xml_file_path']
 
     if args['negative_mode']:
         negative_mode = True
@@ -95,6 +97,7 @@ def process_files(args):
 \tid\
 \tion_mobility\
 \tFAIMS\
+\ttargeted_mode\
 \n')
     else:
         out_file.write('massCalib\
@@ -120,6 +123,7 @@ def process_files(args):
 \tid\
 \tion_mobility\
 \tFAIMS\
+\ttargeted_mode\
 \n')
 
     out_file.close()
@@ -155,6 +159,7 @@ def process_files(args):
         test_peak, test_RT_dict = funcs.boosting_firststep_with_processes(
             number_of_processes, data_for_analyse_tmp, mass_accuracy,
             min_length_hill, data_start_index=data_start_index)
+        
 
         data_start_index += len(data_for_analyse_tmp)
 
@@ -245,6 +250,8 @@ def process_files(args):
         #     str(round((iter_hills_time - start_time) / 60, 1)) + " minutes.")
 
         features = []
+        
+        
 
         for each_id, each in enumerate(tmp):
             features.append(
@@ -253,7 +260,47 @@ def process_files(args):
                     each,
                     each_id,
                     negative_mode, isotopes_mass_error_map))
+        
+        
+        
+        
+        if pep_xml_file_path != '0':
+            targeted_pepxml_file = pepxml.read(pep_xml_file_path)
+            targeted_mode_dict = dict()
+            for i in targeted_pepxml_file:
+                targeted_mode_dict[i['spectrum']] = {'RT' : i['retention_time_sec'],  'expect_score' : i['search_hit'][0]['search_score']['expect'], 'mz' :(i['search_hit'][0]['calc_neutral_pep_mass'] + i['assumed_charge'] * 1.0072) / i['assumed_charge']}
 
+            for idx, f in enumerate(features):
+                for key, value in targeted_mode_dict.items():
+#                     print("=====")
+#                     print(f.mz_tol)
+#                     print(abs(f.mz - value['mz']))
+#                     print("=====")
+                    if abs(f.mz - value['mz']) < f.mz_tol:
+
+                        if test_RT_dict[f.scans[0]] < value['RT']:
+
+                            if value['RT'] < test_RT_dict[f.scans[-1]]:
+
+                                f.targeted((key, value['expect_score']))
+                       
+
+            new_features = []
+
+            for i in features:
+                if not len(i.ms1_scan) == 0:
+                    new_features.append(i)
+
+            features = new_features
+        
+        
+        
+        
+        
+        
+        
+        
+        
         # print(
         #     "Timer: " +
         #     str(round((features_time - start_time) / 60, 1)) + " minutes.")
@@ -292,7 +339,8 @@ def process_files(args):
                         x.ion_mobility if not
                         (x.ion_mobility is None)
                         else 0),
-                    faims_val]]) + '\n')
+                    faims_val,
+                    x.ms1_scan]]) + '\n')
             out_file.close()
         else:
             for x in features:
@@ -322,7 +370,8 @@ def process_files(args):
                         x.ion_mobility if not
                         (x.ion_mobility is None)
                         else 0),
-                    faims_val]]) + '\n')
+                    faims_val,
+                    x.ms1_scan]]) + '\n')
             out_file.close()
 
         total_time = time.time()

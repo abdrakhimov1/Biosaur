@@ -117,6 +117,11 @@ limitations under the License. \n', 'yellow'))
         '--output_file',
         help='Output File')
     parser.add_argument(
+        '-pxfp',
+        '--pep_xml_file_path',
+        default='0',
+        help='Pepxml filepath')
+    parser.add_argument(
         '-faims',
         '--faims',
         help='Use when mzML contain FAIMS data',
