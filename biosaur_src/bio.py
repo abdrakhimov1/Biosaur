@@ -272,15 +272,11 @@ def process_files(args):
 
             for idx, f in enumerate(features):
                 for key, value in targeted_mode_dict.items():
-#                     print("=====")
-#                     print(f.mz_tol)
-#                     print(abs(f.mz - value['mz']))
-#                     print("=====")
+
                     if abs(f.mz - value['mz']) < f.mz_tol:
 
-                        if test_RT_dict[f.scans[0]] < value['RT']:
-
-                            if value['RT'] < test_RT_dict[f.scans[-1]]:
+                        if test_RT_dict[f.scans[0]] * 60 < value['RT']:
+                            if value['RT'] < test_RT_dict[f.scans[-1]] * 60:
 
                                 f.targeted((key, value['expect_score']))
                        
@@ -288,7 +284,7 @@ def process_files(args):
             new_features = []
 
             for i in features:
-                if not len(i.ms1_scan) == 0:
+                if not len(i.ms2_scan) == 0:
                     new_features.append(i)
 
             features = new_features
@@ -340,7 +336,7 @@ def process_files(args):
                         (x.ion_mobility is None)
                         else 0),
                     faims_val,
-                    x.ms1_scan]]) + '\n')
+                    x.ms2_scan]]) + '\n')
             out_file.close()
         else:
             for x in features:
@@ -371,7 +367,7 @@ def process_files(args):
                         (x.ion_mobility is None)
                         else 0),
                     faims_val,
-                    x.ms1_scan]]) + '\n')
+                    x.ms2_scan]]) + '\n')
             out_file.close()
 
         total_time = time.time()
