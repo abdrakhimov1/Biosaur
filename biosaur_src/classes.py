@@ -719,7 +719,7 @@ class peak:
         for hill_idx, hill in enumerate(self.finished_hills):
             # smothed_intensity = hill.intensity
 
-            smothed_intensity = meanfilt(hill.intensity, 3)
+            smothed_intensity = meanfilt(hill.intensity, 2)
 
             # smothed_intensity = medfilt(smothed_intensity, 3)
 
@@ -760,11 +760,11 @@ class peak:
                 prev_idx = 0
                 for min_idx in min_idx_list:
                     new_hills.append(ready_hill(
-                                        intensity=hill.intensity[prev_idx:min_idx],
-                                        scan_id=hill.scan_id[prev_idx:min_idx],
-                                        mass=hill.mass[prev_idx:min_idx],
+                                        intensity=hill.intensity[prev_idx:min_idx+1],
+                                        scan_id=hill.scan_id[prev_idx:min_idx+1],
+                                        mass=hill.mass[prev_idx:min_idx+1],
                                         ion_mobility=(
-                                            hill.ion_mobility[prev_idx:min_idx] if not
+                                            hill.ion_mobility[prev_idx:min_idx+1] if not
                                             (hill.ion_mobility is None) else
                                             None)))
                     prev_idx = min_idx

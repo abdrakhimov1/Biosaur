@@ -996,6 +996,8 @@ def boosting_secondstep_with_processes(
                 ready_set.add(pep_feature[0])
                 for cand in pep_feature[1]:
                     ready_set.add(cand[0])
+                for s_cand in pep_feature[2]:
+                    ready_set.add(s_cand[0])
                 del ready[cur_l]
                 max_l -= 1
                 cur_l -= 1
