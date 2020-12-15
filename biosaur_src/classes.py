@@ -813,7 +813,10 @@ class feature:
 
         # mass_for_average2 = [zm * (1 - 1e-6 * (a_cus * zi + b_cus)) for zm, zi in zip(mass_for_average2, intensity_for_average2)]
         self.mz = np.average(mass_for_average2, weights=intensity_for_average2)
-
+        
+        
+        mass_acc = 8
+        self.mz_tol = mass_acc*1e-6*self.mz
 
         # mass_for_average = finished_hills[each[0]].mass + list(itertools.chain.from_iterable([(z * (1 - 1e-6 * isotopes_mass_error_map[i_numb+1][0]) - (i_numb+1)*1.00335/ech[1]) for z in finished_hills[ech[0]].mass] for i_numb, ech in enumerate(each[1])))
         # # mass_for_average = finished_hills[each[0]].mass + list(itertools.chain.from_iterable([(z - (i_numb+1)*1.00335/ech[1]) for z in finished_hills[ech[0]].mass] for i_numb, ech in enumerate(each[1])))
@@ -878,3 +881,7 @@ class feature:
         self.scan_id_2 = each[4][8]
         self.mz_std_2 = each[4][9]
         self.id = each_id
+        self.ms2_scan = []
+        
+    def targeted(self, scan):
+        self.ms2_scan.append(scan)

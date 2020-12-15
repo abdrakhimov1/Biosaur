@@ -972,7 +972,6 @@ def boosting_secondstep_with_processes(
 
     ready_final = []
     ready_set = set()
-
     ready = sorted(ready, key=lambda x: -len(x[-2][0])-x[-1])
     cur_isotopes = len(ready[0][-2][0])
 
@@ -1052,7 +1051,6 @@ def boosting_secondstep_with_processes(
     #                 cur_l -= 1
         cur_l += 1
         
-
 
     return ready_final, isotopes_mass_error_map
 
