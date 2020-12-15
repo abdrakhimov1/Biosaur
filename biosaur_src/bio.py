@@ -1,11 +1,13 @@
 import time
 from os import path
 from pyteomics import mzml
+import pandas as pd
 from pyteomics import pepxml
 import numpy as np
 from . import funcs
 from . import classes
 import logging
+from . import utills
 logging.basicConfig(format=u'%(filename)s[LINE:%(lineno)d]#\
 %(levelname)-8s [%(asctime)s]  %(message)s', level=logging.DEBUG)
 
@@ -265,21 +267,31 @@ def process_files(args):
         
         
         if pep_xml_file_path != '0':
-            targeted_pepxml_file = pepxml.read(pep_xml_file_path)
+#             targeted_pepxml_file = pepxml.read(pep_xml_file_path)
+            targeted_dataframe = utills.prepare_dataframe(pep_xml_file_path)[0]
             targeted_mode_dict = dict()
-            for i in targeted_pepxml_file:
-                targeted_mode_dict[i['spectrum']] = {'RT' : i['retention_time_sec'],  'expect_score' : i['search_hit'][0]['search_score']['expect'], 'mz' :(i['search_hit'][0]['calc_neutral_pep_mass'] + i['assumed_charge'] * 1.0072) / i['assumed_charge']}
-
+            for index, i in targeted_dataframe.iterrows():
+                targeted_mode_dict[i['spectrum']] = {
+                    'RT' : i['RT exp'], 
+                    'expect_score' : i['expect'],
+                    'mz' :(i['calc_neutral_pep_mass'] + i['assumed_charge'] * 1.0072) / i['assumed_charge']}
+                
+            
             for idx, f in enumerate(features):
+                keys_to_del = []
                 for key, value in targeted_mode_dict.items():
-
                     if abs(f.mz - value['mz']) < f.mz_tol:
+                        
+                        if test_RT_dict[f.scans[0]] < value['RT']:
 
-                        if test_RT_dict[f.scans[0]] * 60 < value['RT']:
-                            if value['RT'] < test_RT_dict[f.scans[-1]] * 60:
+                            if value['RT'] < test_RT_dict[f.scans[-1]]:
 
                                 f.targeted((key, value['expect_score']))
-                       
+                                keys_to_del.append(key)
+                  
+                for each in keys_to_del:
+                    del targeted_mode_dict[each]
+                print(len(targeted_mode_dict))
 
             new_features = []
 
@@ -370,6 +382,14 @@ def process_files(args):
                     x.ms2_scan]]) + '\n')
             out_file.close()
 
+        if pep_xml_file_path != '0':    
+            bio = pd.read_table(output_file)
+            ms_ms_df = bio.sort_values(['cos_corr_1', 'nIsotopes'], ascending=[False, False]).drop_duplicates(subset='targeted_mode', keep="last")
+            ms_ms_df['ms_2'] = ms_ms_df['targeted_mode'].apply(lambda x: x.split(',')[0][3:-1:])
+            ms_ms_df['ms_2_expect_val'] = ms_ms_df['targeted_mode'].apply(lambda x: x.split(',')[1][0:-2])
+            bio = ms_ms_df.drop(['targeted_mode'], axis=1)
+            bio.to_csv(output_file)
+        
         total_time = time.time()
         print('=========================================================== \n')
         logging.info("Ready!")
