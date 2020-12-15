@@ -47,6 +47,7 @@
 * [Getting Started](#getting-started)
   * [Installation](#installation)
 * [Usage](#usage)
+* [Targeted Mode](#targeted-mode)
 * [Roadmap](#roadmap)
 * [Contributing](#contributing)
 * [License](#license)
@@ -126,18 +127,17 @@ The best way to deal with it is to use `--combineIonMobilitySpectra` with `--fil
 
 ## Targeted Mode
 
-Biosaur provides the ability to work in targeted mode. To activate it, you need to provide MS/MS search results. Biosaur will automatically adjust the operation of the algorithm, and will take into account MS/MS search results during the preparation of the final report.
+Biosaur has targeted mode, in which it matches the results of identification of MS/MS spectra to the peptide features. To activate it, the MS/MS search results in pepXML or mzID format are required. Biosaur will take into account MS/MS search results during feature detection workflow.
+If you want to activate biosaur targeted mode, add a keyword `--pxfp`  and provide path to the results of the MS/MS search engine.
 
-If you want to activate biosaur targeted mode, add a keyword `--pxfp` to the app launch command and provide the results of one of the search engines. 
-
-Current Biosaur version supports X!Tandem [PMID: 14976030], IdentiPy [PMID: 29682971], MSFragger [PMID: 28394336], Comet [PMID: 23148064] search outputs in pepXML formats, as well as MSGF+ [PMID: 25358478] output in mzID format.
+Current Biosaur version supports X!Tandem, IdentiPy, MSFragger, Comet search outputs in pepXML formats, as well as MSGF+ output in mzID format.
 
 Example:
 ```sh
 biosaur YOUR_FILE.mzML --pxfp YOUR_SEARCH_ENGINE_RESULT.pep.xml
 ```
+The output of Biosaur will contain a column with the MS/MS scans IDs and the corresponding peptide features, as in the standart mode of the Biosaur.
 
-At the output, the program will generate a report containing a column with the values of scans in MS/MS search and the corresponding peptide features, as in the standart mode of the Biosaur.
 <!-- ROADMAP -->
 ## Roadmap
 
