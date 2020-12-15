@@ -124,7 +124,20 @@ First of all, the .d files should be converted to mzML format using msconvert wi
 
 The best way to deal with it is to use `--combineIonMobilitySpectra` with `--filter "msLevel 1"` to create an individual mzML file for Biosaur-only analysis. At the current moment, TIMS TOF data has enormous size of files, as well as a huge amount of peaks, so it is highly recommended to use Biosaur `--min_intensity` option to reduce complexity of the analysis. For example, using `--min_intensity 1000` option requires ~10 Gb of RAM memory and 20 mins of processing time on average PC (Intel i7-3930K CPU) when applied to a complex sample dataset containing 8000 MS1 spectra (`200ng_HeLa_50cm_120min_100ms from PXD010012` on the ProteomeXchange). The same data with `--min_intensity 800` filter requires 40 minutes of processing. The analyis of similar data for Orbitrap HF with no ion mobility info and no restrictions on `--min_intensity` takes ~5-10 min. In general, increasing `--min_intensity` reduces Biosaur analysis time and RAM consumption in non-linear way, but at the same time decreases sensitivity of feature detection.
 
+## Targeted Mode
 
+Biosaur provides the ability to work in targeted mode. To activate it, you need to provide MS/MS search results. Biosaur will automatically adjust the operation of the algorithm, and will take into account MS/MS search results during the preparation of the final report.
+
+If you want to activate biosaur targeted mode, add a keyword `--pxfp` to the app launch command and provide the results of one of the search engines. 
+
+Current Biosaur version supports X!Tandem [PMID: 14976030], IdentiPy [PMID: 29682971], MSFragger [PMID: 28394336], Comet [PMID: 23148064] search outputs in pepXML formats, as well as MSGF+ [PMID: 25358478] output in mzID format.
+
+Example:
+```sh
+biosaur YOUR_FILE.mzML --pxfp YOUR_SEARCH_ENGINE_RESULT.pep.xml
+```
+
+At the output, the program will generate a report containing a column with the values of scans in MS/MS search and the corresponding peptide features, as in the standart mode of the Biosaur.
 <!-- ROADMAP -->
 ## Roadmap
 
