@@ -661,9 +661,9 @@ def boosting_firststep_with_processes(
         data_for_analyse,
         mass_accuracy,
         min_length_hill,
-        ms2_data_for_analyse,
-        data_start_index=0,
+        ms2_data_for_analyse
         ):
+    data_start_index = 0
     for idx, v in enumerate(data_for_analyse):
         v['index'] = idx + 1 + data_start_index
 
