@@ -177,9 +177,10 @@ def process_files(args):
                 if z['FAIMS compensation voltage'] == faims_val:
                     data_for_analyse_tmp.append(z)
 
-        test_peak, test_RT_dict = funcs.boosting_firststep_with_processes(
-            number_of_processes, data_for_analyse_tmp, mass_accuracy,
-            min_length_hill, data_start_index=data_start_index, ms2_data_for_analyse=ms2_data_for_analyse)
+        test_peak, test_RT_dict = funcs.boosting_firststep_with_processes(number_of_processes, data_for_analyse_tmp,
+                                                                          mass_accuracy, min_length_hill,
+                                                                          ms2_data_for_analyse=ms2_data_for_analyse,
+                                                                          data_start_index=data_start_index)
         
 
         data_start_index += len(data_for_analyse_tmp)
