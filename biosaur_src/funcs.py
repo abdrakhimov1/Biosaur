@@ -636,7 +636,7 @@ def worker_data_to_features(
         start_index,
         end_index,
         mass_accuracy,
-        min_length_hill, proccess_number):
+        min_length_hill, proccess_number, ms2_for_analise):
     start_index = start_index * (1 - 1e-6 * 2 * mass_accuracy)
     end_index = end_index * (1 + 1e-6 * 2 * end_index)
 
