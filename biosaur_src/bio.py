@@ -43,6 +43,7 @@ def process_files(args):
     #     input_mzml_path) if z['ms level'] == 1)
 
     data_for_analyse = []
+    ms2_data_for_analyse = []
     for z in mzml.read(input_mzml_path):
         if z['ms level'] == 1:
 
@@ -63,8 +64,22 @@ def process_files(args):
 
 
                 data_for_analyse.append(z)
-                # if len(data_for_analyse) > 50:
-                #     break
+
+        else:
+            ms2_idx = z['intensity array'] >= min_intensity
+            z['intensity array'] = z['intensity array'][ms2_idx]
+            z['m/z array'] = z['m/z array'][ms2_idx]
+            if 'mean inverse reduced ion mobility array' in z:
+                z['mean inverse reduced ion mobility array'] = z['mean inverse reduced ion mobility array'][ms2_idx]
+
+            ms2_idx = np.argsort(z['m/z array'])
+            z['m/z array'] = z['m/z array'][ms2_idx]
+            z['intensity array'] = z['intensity array'][ms2_idx]
+            if 'mean inverse reduced ion mobility array' in z:
+                z['mean inverse reduced ion mobility array'] = z['mean inverse reduced ion mobility array'][ms2_idx]
+            z['base peak m/z'] = float(str(z['base peak m/z']).replace(' m/z', ''))
+            ms2_data_for_analyse.append(z)
+
 
     logging.info(u'Number of MS1 scans: ' + str(len(data_for_analyse)))
     tmp_str = 'maximum amount of'
@@ -100,6 +115,8 @@ def process_files(args):
 \tion_mobility\
 \tFAIMS\
 \ttargeted_mode\
+\tms2_mz\
+\tms2_intensity\
 \n')
     else:
         out_file.write('massCalib\
@@ -126,6 +143,8 @@ def process_files(args):
 \tion_mobility\
 \tFAIMS\
 \ttargeted_mode\
+\tms2_mz\
+\tms2_intensity\
 \n')
 
     out_file.close()
@@ -159,7 +178,7 @@ def process_files(args):
                     data_for_analyse_tmp.append(z)
 
         test_peak, test_RT_dict = funcs.boosting_firststep_with_processes(
-            number_of_processes, data_for_analyse_tmp, mass_accuracy,
+            number_of_processes, data_for_analyse_tmp, ms2_data_for_analyse, mass_accuracy,
             min_length_hill, data_start_index=data_start_index)
         
 
@@ -281,7 +300,7 @@ def process_files(args):
                 keys_to_del = []
                 for key, value in targeted_mode_dict.items():
                     if abs(f.mz - value['mz']) < f.mz_tol:
-                        
+
                         if test_RT_dict[f.scans[0]] < value['RT']:
 
                             if value['RT'] < test_RT_dict[f.scans[-1]]:
@@ -300,10 +319,8 @@ def process_files(args):
                     new_features.append(i)
 
             features = new_features
-        
-        
-        
-        
+
+
         
         
         
@@ -348,7 +365,10 @@ def process_files(args):
                         (x.ion_mobility is None)
                         else 0),
                     faims_val,
-                    x.ms2_scan]]) + '\n')
+                    x.ms2_scan,
+                    x.ms2_mz,
+                    x.ms2_intensity
+                ]]) + '\n')
             out_file.close()
         else:
             for x in features:
@@ -379,7 +399,10 @@ def process_files(args):
                         (x.ion_mobility is None)
                         else 0),
                     faims_val,
-                    x.ms2_scan]]) + '\n')
+                    x.ms2_scan,
+                    x.ms2_mz,
+                    x.ms2_intensity
+                ]]) + '\n')
             out_file.close()
 
         if pep_xml_file_path != '0':    

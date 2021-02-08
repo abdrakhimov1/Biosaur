@@ -9,6 +9,7 @@ from multiprocessing import Queue, Process, cpu_count
 import logging
 import itertools
 from collections import defaultdict
+
 logging.basicConfig(format=u'%(filename)s[LINE:%(lineno)d]#\
 %(levelname)-8s [%(asctime)s] %(message)s', level=logging.DEBUG)
 
@@ -30,8 +31,8 @@ logging.basicConfig(format=u'%(filename)s[LINE:%(lineno)d]#\
 #             peak.finished_hills.append(tmp_ready_hill)
 
 
-def data_to_features(input_file, max_diff, min_length_hill, proccess_number, start_index, end_index):
-
+def data_to_features(input_file, max_diff, min_length_hill, proccess_number, start_index, end_index,
+                     ms2_data_for_analyse):
     # data = mzml.read(input_file)
 
     # working_area = next(data)
@@ -104,9 +105,11 @@ def data_to_features(input_file, max_diff, min_length_hill, proccess_number, sta
             RT_dict[i['index']] = float(
                 i['scanList']['scan'][0]['scan start time'])
         # if k > 10:
-            # break
-            # pass
+        # break
+        # pass
         k += 1
+    for i in ms2_data_for_analyse:
+        peak1.push_me_to_the_peak_nearest(i['m/z array'], i['intensity array'], max_diff, min_length_hill)
     peak1.push_left(min_length=min_length_hill)
     # peak1.medar = np.array(peak1.medar)
     # peak1.medar = np.cumprod(peak1.medar)
@@ -123,7 +126,6 @@ def data_to_features(input_file, max_diff, min_length_hill, proccess_number, sta
 
 
 def first_or_second(id1, id2, charge1, charge2, first, second, theoretiacal):
-
     if abs(theoretiacal - first) <= abs(theoretiacal - second):
         return id1, charge1
     else:
@@ -131,7 +133,6 @@ def first_or_second(id1, id2, charge1, charge2, first, second, theoretiacal):
 
 
 def cos_correlation(theoretical_list, experimental_list):
-
     suit_len = min(len(theoretical_list), len(experimental_list))
 
     theoretical_list = theoretical_list[:suit_len]
@@ -140,7 +141,7 @@ def cos_correlation(theoretical_list, experimental_list):
     top = 0
 
     bottom = math.sqrt(sum([numb * numb for numb in theoretical_list])) * \
-        math.sqrt(sum([numb * numb for numb in experimental_list]))
+             math.sqrt(sum([numb * numb for numb in experimental_list]))
 
     for i1, i2 in zip(theoretical_list, experimental_list):
         top += i1 * i2
@@ -149,7 +150,6 @@ def cos_correlation(theoretical_list, experimental_list):
 
 
 def cos_correlation_new(theoretical_list, experimental_list, shf):
-
     theor_total_sum = sum(theoretical_list)
     theoretical_list = theoretical_list[shf:]
     suit_len = min(len(theoretical_list), len(experimental_list))
@@ -166,7 +166,7 @@ def cos_correlation_new(theoretical_list, experimental_list, shf):
     else:
 
         bottom = math.sqrt(sum([numb * numb for numb in theoretical_list])) * \
-            math.sqrt(sum([numb * numb for numb in experimental_list]))
+                 math.sqrt(sum([numb * numb for numb in experimental_list]))
 
         averagineExplained = sum(theoretical_list) / theor_total_sum
 
@@ -174,7 +174,6 @@ def cos_correlation_new(theoretical_list, experimental_list, shf):
 
 
 def cos_correlation_fill_zeroes(hill_1, hill_2):
-
     inter_set = hill_1.scan_set.intersection(hill_2.scan_set)
     if len(inter_set) >= 2:
 
@@ -183,8 +182,7 @@ def cos_correlation_fill_zeroes(hill_1, hill_2):
             h1_val = hill_1.idict.get(i, 0)
             h2_val = hill_2.idict.get(i, 0)
             top += h1_val * h2_val
-        
-        
+
         bottom = hill_1.sqrt_of_i_sum_squares * hill_2.sqrt_of_i_sum_squares
         # bottom = math.sqrt(sum(v * v for key, v in hill_1.idict.items() if key in inter_set)) * math.sqrt(sum(v * v for key, v in hill_2.idict.items() if key in inter_set))
         return top / bottom
@@ -195,7 +193,6 @@ def cos_correlation_fill_zeroes(hill_1, hill_2):
 
 def checking_cos_correlation_for_carbon_noshift(
         theoretical_list, experimental_list, thresh):
-
     # prev_corr = 0
     # size = 1
     best_value = 0
@@ -245,9 +242,9 @@ def checking_cos_correlation_for_carbon_noshift(
 
     return best_cor, best_pos, best_shift
 
+
 def checking_cos_correlation_for_carbon(
         theoretical_list, experimental_list, thresh):
-
     # prev_corr = 0
     # size = 1
     best_value = 0
@@ -267,7 +264,7 @@ def checking_cos_correlation_for_carbon(
             # if averagineExplained < 0.5:
             #     break
             if averagineExplained >= 0.5 and averagineCorrelation >= thresh:
-                tmp_val = averagineCorrelation# * averagineExplained
+                tmp_val = averagineCorrelation  # * averagineExplained
                 if tmp_val > best_value:
                     best_value = tmp_val
                     best_cor = averagineCorrelation
@@ -307,7 +304,6 @@ def iter_hills(
         end_index,
         min_length,
         proccess_number=1):
-
     ready = []
     averagine_mass = 111.1254
     averagine_C = 4.9384
@@ -348,16 +344,16 @@ def iter_hills(
         # int_arr_norm = int_arr / int_arr.max()
         int_arr_norm = int_arr / int_arr.sum()
         # prec_is = np.where(int_arr_norm >= 0.01)[0]
-#         isotopes_int.append(int_arr_norm[prec_is])
-#         prec_minisotopes.append(prec_is.min())
-#         prec_isotopes.append(prec_is - prec_minisotopes[-1])
+        #         isotopes_int.append(int_arr_norm[prec_is])
+        #         prec_minisotopes.append(prec_is.min())
+        #         prec_isotopes.append(prec_is - prec_minisotopes[-1])
         a[i] = int_arr_norm
 
     end_index = min(end_index, len(peak.finished_hills))
     size = end_index
 
     ready_set = set()
-    
+
     charges = list(range(min_charge, max_charge + 1, 1)[::-1])
 
     numbers = []
@@ -375,7 +371,7 @@ def iter_hills(
             mz_tol = mass_acc * 1e-6 * peak.finished_hills[i].mz
 
             for charge in charges:
-                
+
                 candidates = []
                 s_candidates = []
 
@@ -395,9 +391,8 @@ def iter_hills(
                     tmp_candidates = []
                     tmp_s_candidates = []
 
-
                     m_to_check = peak_1_mz + (1.00335 * numb / charge)
-                    m_to_check_fast = int(m_to_check/0.02)
+                    m_to_check_fast = int(m_to_check / 0.02)
 
                     for j in peak.get_potential_isotope_id(m_to_check_fast, i):
 
@@ -405,19 +400,20 @@ def iter_hills(
 
                         diff = peak_2_mz - m_to_check
 
-                        if abs(diff) <= mz_tol and (peak.finished_hills[i].opt_ion_mobility is None or abs(peak.finished_hills[i].opt_ion_mobility-peak.finished_hills[j].opt_ion_mobility) <= 0.01):
+                        if abs(diff) <= mz_tol and (peak.finished_hills[i].opt_ion_mobility is None or abs(
+                                peak.finished_hills[i].opt_ion_mobility - peak.finished_hills[
+                                    j].opt_ion_mobility) <= 0.01):
 
                             cos_cor_test = cos_correlation_fill_zeroes(
-                                                peak.finished_hills[i],
-                                                peak.finished_hills[j])
+                                peak.finished_hills[i],
+                                peak.finished_hills[j])
 
                             if cos_cor_test >= 0.6:
 
-                                tmp_candidates.append((j, charge, cos_cor_test, diff/m_to_check*1e6, 0))
+                                tmp_candidates.append((j, charge, cos_cor_test, diff / m_to_check * 1e6, 0))
 
                                 if numb == 1:
                                     diff_for_output = diff / peak_2_mz
-
 
                     # if numb == 2:
 
@@ -443,12 +439,11 @@ def iter_hills(
                     #                     if cos_cor_test >= 0.6:
                     #                         tmp_candidates.append((j, charge, cos_cor_test, diff/m_to_check2*1e6, n_sulf))
 
-
                     if numb == 2:
 
                         m_to_check = peak_1_mz + \
-                            (1.9957958999999974 / 2 * numb / charge)
-                        m_to_check_fast = int(m_to_check/0.02)
+                                     (1.9957958999999974 / 2 * numb / charge)
+                        m_to_check_fast = int(m_to_check / 0.02)
 
                         # for j in range(ks + 1, size, 1):
                         for j in peak.get_potential_isotope_id(m_to_check_fast, i):
@@ -466,11 +461,10 @@ def iter_hills(
                                 # peak.finished_hills[j]) >= 0.7:
                                 if abs(diff) <= mz_tol:
                                     s_cos_cor = cos_correlation_fill_zeroes(
-                                            peak.finished_hills[i],
-                                            peak.finished_hills[j])
+                                        peak.finished_hills[i],
+                                        peak.finished_hills[j])
                                     if s_cos_cor >= 0.6:
-
-                                        tmp_s_candidates.append([j, charge, s_cos_cor, diff/m_to_check*1e6])
+                                        tmp_s_candidates.append([j, charge, s_cos_cor, diff / m_to_check * 1e6])
 
                                         # if len(s_candidates) < numb / 2:
 
@@ -498,7 +492,7 @@ def iter_hills(
                                         #             intensity2,
                                         #             s_th_i))
 
-                                            # pass
+                                        # pass
                     if len(tmp_candidates):
                         # if len(tmp_candidates) > 1:
                         #     print(len(tmp_candidates))
@@ -506,7 +500,6 @@ def iter_hills(
 
                         if len(tmp_s_candidates):
                             s_candidates = tmp_s_candidates
-
 
                     if len(candidates) < numb:
                         break
@@ -517,13 +510,11 @@ def iter_hills(
 
                 if candidates:
 
-
                     if len(s_candidates):
 
                         tmp_s_candidates = []
 
                         for iter_s_candidates in s_candidates:
-
 
                             s_all_exp_intensity = [peak.finished_hills[i].max_intensity]
                             # for k in iter_s_candidates:
@@ -531,8 +522,8 @@ def iter_hills(
                                 peak.finished_hills[iter_s_candidates[0]].max_intensity)
 
                             s_c_cor = cos_correlation(
-                                    s_all_theoretical_int,
-                                    s_all_exp_intensity)
+                                s_all_theoretical_int,
+                                s_all_exp_intensity)
                             if s_c_cor > 0.6:
                                 tmp_s_candidates.append(iter_s_candidates)
                                 tmp_s_candidates[-1].append(s_c_cor)
@@ -580,8 +571,8 @@ def iter_hills(
                             all_theoretical_int, all_exp_intensity, 0.6)
 
                         cos_corr_for_output = cos_correlation(
-                                                all_theoretical_int[0:1],
-                                                all_exp_intensity[0:1])
+                            all_theoretical_int[0:1],
+                            all_exp_intensity[0:1])
 
                         if cos_corr:  # прикрутить изменение параметра 0.6
 
@@ -600,36 +591,38 @@ def iter_hills(
                                 s_candidates,
                                 shift,
                                 [cos_corr,
-                                    cos_corr_for_output,
-                                    cos_cor_test,
-                                    diff_for_output,
-                                    peak.finished_hills[i].intensity,
-                                    peak.finished_hills[i].scan_id,
-                                    peak.finished_hills[i].mz_std,
-                                    intensity_2,
-                                    scan_id_2,
-                                    mz_std_2],
-                                    [all_theoretical_int, all_exp_intensity]])
+                                 cos_corr_for_output,
+                                 cos_cor_test,
+                                 diff_for_output,
+                                 peak.finished_hills[i].intensity,
+                                 peak.finished_hills[i].scan_id,
+                                 peak.finished_hills[i].mz_std,
+                                 intensity_2,
+                                 scan_id_2,
+                                 mz_std_2],
+                                [
+                                    all_theoretical_int,
+                                    all_exp_intensity
+                                ],
+                                peak.ms2_mz_array,
+                                peak.ms2_intensity_array
+                            ])
                             # ready_set.add(i)
                             # for ic in candidates:
                             #     if ic[1] != 0:
                             #         ready_set.add(ic[0])
 
-
-                                    # for ic in s_candidates:
-                                    #     ready_set.add(ic[0])
-
+                            # for ic in s_candidates:
+                            #     ready_set.add(ic[0])
 
     # ready = sorted(ready, key=lambda x: -len(x[1]))
     # ready_final = []
     # ready_set = set()
 
-
     # for pep_feature in ready:
     #     if pep_feature[0] not in ready_set:
     #         ready_final.append(pep_feature)
     #         ready_set.add(pep_feature[0])
-
 
     logging.info(
         u'All hills were iterated correctly with this process /' +
@@ -644,7 +637,6 @@ def worker_data_to_features(
         end_index,
         mass_accuracy,
         min_length_hill, proccess_number):
-
     start_index = start_index * (1 - 1e-6 * 2 * mass_accuracy)
     end_index = end_index * (1 + 1e-6 * 2 * end_index)
 
@@ -655,7 +647,7 @@ def worker_data_to_features(
         proccess_number,
         start_index,
         end_index
-        )
+    )
 
     if result_peak:
         qout.put((result_peak, result_RT_dict))
@@ -666,10 +658,10 @@ def worker_data_to_features(
 def boosting_firststep_with_processes(
         number_of_processes,
         data_for_analyse,
+        ms2_data_for_analyse,
         mass_accuracy,
         min_length_hill,
         data_start_index=0):
-
     for idx, v in enumerate(data_for_analyse):
         v['index'] = idx + 1 + data_start_index
 
@@ -684,15 +676,15 @@ def boosting_firststep_with_processes(
     if number_of_processes == 1:
 
         result_peak, result_RT_dict = data_to_features(
-            data_for_analyse, mass_accuracy, min_length_hill, 1, 0, 2500)
+            data_for_analyse, mass_accuracy, min_length_hill, 1, 0, 2500, ms2_data_for_analyse)
 
     else:
         qout = Queue()
 
-#         qin = list(islice(it, 500000))
-#         if not len(qin):
-#             break
-# #           print 'Loaded 500000 items. Ending cycle.'
+        #         qin = list(islice(it, 500000))
+        #         if not len(qin):
+        #             break
+        # #           print 'Loaded 500000 items. Ending cycle.'
         procs = []
 
         data_for_analyse_len = len(data_for_analyse)
@@ -710,14 +702,16 @@ def boosting_firststep_with_processes(
                     start_mz,
                     step + start_mz,
                     mass_accuracy,
-                    min_length_hill, i))
+                    min_length_hill,
+                    ms2_data_for_analyse,
+                    i))
             # print(start_index)
             p.start()
             procs.append(p)
             start_mz += step
 
         result_peak = False
-        result_RT_dict = False#dict()
+        result_RT_dict = False  # dict()
 
         # all_peaks = []
         for _ in range(number_of_processes * 3):
@@ -736,11 +730,12 @@ def boosting_firststep_with_processes(
                     result_RT_dict.update(item[1])
         # result_peak = concat_peaks(all_peaks)
 
-            # print(len(result_peak.finished_hills))
+        # print(len(result_peak.finished_hills))
         for p in procs:
             p.join()
 
     return result_peak, result_RT_dict
+
 
 def concat_peaks(all_peaks):
     all_peaks = sorted(all_peaks, key=lambda x: x.intervals[0])
@@ -761,8 +756,7 @@ def worker_iter_hills(
         mass_accuracy,
         min_length,
         proccess_number
-        ):
-
+):
     result_q = iter_hills(
         peak,
         min_charge,
@@ -783,8 +777,8 @@ def worker_iter_hills(
 def noisygaus(x, a, x0, sigma, b):
     return a * np.exp(-(x - x0) ** 2 / (2 * sigma ** 2)) + b
 
-def calibrate_mass(bwidth, mass_left, mass_right, true_md):
 
+def calibrate_mass(bwidth, mass_left, mass_right, true_md):
     bbins = np.arange(-mass_left, mass_right, bwidth)
     H1, b1 = np.histogram(true_md, bins=bbins)
     b1 = b1 + bwidth
@@ -795,7 +789,6 @@ def calibrate_mass(bwidth, mass_left, mass_right, true_md):
     return mass_shift, mass_sigma, pcov[0][0]
 
 
-
 def boosting_secondstep_with_processes(
         number_of_processes,
         peak,
@@ -804,7 +797,6 @@ def boosting_secondstep_with_processes(
         min_intensity,
         mass_accuracy,
         min_length):
-
     if number_of_processes == 0:
 
         try:
@@ -822,10 +814,10 @@ def boosting_secondstep_with_processes(
     else:
         qout = Queue()
 
-#         qin = list(islice(it, 500000))
-#         if not len(qin):
-#             break
-# #           print 'Loaded 500000 items. Ending cycle.'
+        #         qin = list(islice(it, 500000))
+        #         if not len(qin):
+        #             break
+        # #           print 'Loaded 500000 items. Ending cycle.'
         procs = []
 
         peak_len = len(peak.finished_hills)
@@ -875,7 +867,7 @@ def boosting_secondstep_with_processes(
     for pep_feature in ready:
         for icc, cand in enumerate(pep_feature[1]):
             if icc != 1 or cand[4] == 0:
-                isotopes_mass_error_map[icc+1].append(cand[3])
+                isotopes_mass_error_map[icc + 1].append(cand[3])
     for ic in range(1, 10, 1):
         if len(isotopes_mass_error_map[ic]) >= 1000:
 
@@ -895,24 +887,24 @@ def boosting_secondstep_with_processes(
                         mass_shift, mass_sigma, covvalue = calibrate_mass(0.25, mass_left, mass_right, true_md)
                 if np.isinf(covvalue):
                     mass_shift, mass_sigma, covvalue = calibrate_mass(0.05, mass_left, mass_right, true_md)
-                
+
                 isotopes_mass_error_map[ic] = [mass_shift, mass_sigma]
 
             except:
-                isotopes_mass_error_map[ic] = isotopes_mass_error_map[ic-1]
+                isotopes_mass_error_map[ic] = isotopes_mass_error_map[ic - 1]
 
         else:
-            isotopes_mass_error_map[ic] = isotopes_mass_error_map[ic-1]
+            isotopes_mass_error_map[ic] = isotopes_mass_error_map[ic - 1]
     # print(isotopes_mass_error_map)
 
     for pfidx, pep_feature in enumerate(ready):
         allowed_idx = 1
         for icc, cand in enumerate(pep_feature[1]):
-            if abs(cand[3] - isotopes_mass_error_map[icc+1][0])/isotopes_mass_error_map[icc+1][1] <= 5 or (icc == 1 and cand[4] > 0):
+            if abs(cand[3] - isotopes_mass_error_map[icc + 1][0]) / isotopes_mass_error_map[icc + 1][1] <= 5 or (
+                    icc == 1 and cand[4] > 0):
                 allowed_idx += 1
             else:
                 break
-
 
         all_theoretical_int, all_exp_intensity = pep_feature[5]
         all_theoretical_int = all_theoretical_int[:allowed_idx]
@@ -920,13 +912,12 @@ def boosting_secondstep_with_processes(
 
         ready[pfidx][1] = ready[pfidx][1][:allowed_idx]
         ready[pfidx][5] = [all_theoretical_int, all_exp_intensity]
-    
+
         ready[pfidx].append(min(checking_cos_correlation_for_carbon(
-                        all_theoretical_int, all_exp_intensity, 0.6)[0], 0.99999999))
-        
-    
+            all_theoretical_int, all_exp_intensity, 0.6)[0], 0.99999999))
+
     # ready = sorted(ready, key=lambda x: -x[-1])
-    ready = sorted(ready, key=lambda x: -len(x[-2][0])-x[-1])
+    ready = sorted(ready, key=lambda x: -len(x[-2][0]) - x[-1])
     # ready = sorted(ready, key=lambda x: -len(x[-2][0]))
 
     # for pep_feature in ready:
@@ -972,15 +963,15 @@ def boosting_secondstep_with_processes(
 
     ready_final = []
     ready_set = set()
-    ready = sorted(ready, key=lambda x: -len(x[-2][0])-x[-1])
+    ready = sorted(ready, key=lambda x: -len(x[-2][0]) - x[-1])
     cur_isotopes = len(ready[0][-2][0])
 
     cnt_mark = 0
 
     while cur_l < max_l:
         cnt_mark += 1
-    #     if cnt_mark > 1000:
-    #         break
+        #     if cnt_mark > 1000:
+        #         break
         pep_feature = ready[cur_l]
         # print(cur_l, max_l, cur_isotopes, len(ready_final), -len(pep_feature[-2][0])-pep_feature[-1])
         n_iso = len(pep_feature[-2][0])
@@ -988,7 +979,7 @@ def boosting_secondstep_with_processes(
             ready = sorted(ready, key=lambda x: -len(x[-2][0]))
             cur_isotopes = n_iso
             cur_l = 0
-            
+
         if pep_feature[0] not in ready_set:
             if not any(cand[0] in ready_set for cand in pep_feature[1]):
                 ready_final.append(pep_feature)
@@ -1003,9 +994,9 @@ def boosting_secondstep_with_processes(
 
             else:
                 tmp = []
-                
-    #             cur_isotopes = len(pep_feature[1])
-                
+
+                #             cur_isotopes = len(pep_feature[1])
+
                 for cand in pep_feature[1]:
                     if cand[0] not in ready_set:
                         tmp.append(cand)
@@ -1017,9 +1008,9 @@ def boosting_secondstep_with_processes(
                     all_theoretical_int = all_theoretical_int[:len(tmp)]
                     all_exp_intensity = all_exp_intensity[:len(tmp)]
                     (cos_corr,
-                            number_of_passed_isotopes,
-                            shift) = checking_cos_correlation_for_carbon(
-                            all_theoretical_int, all_exp_intensity, 0.6)
+                     number_of_passed_isotopes,
+                     shift) = checking_cos_correlation_for_carbon(
+                        all_theoretical_int, all_exp_intensity, 0.6)
                     if cos_corr:
                         ready[cur_l] = [pep_feature[0],
                                         pep_feature[1],
@@ -1029,13 +1020,13 @@ def boosting_secondstep_with_processes(
                                         [all_theoretical_int, all_exp_intensity],
                                         cos_corr]
 
-                    
+
                     else:
                         del ready[cur_l]
                         max_l -= 1
                         cur_l -= 1
-                    
-                    
+
+
                 else:
                     del ready[cur_l]
                     max_l -= 1
@@ -1045,18 +1036,16 @@ def boosting_secondstep_with_processes(
             max_l -= 1
             cur_l -= 1
 
+        #                 ready = ready[:cur_l] + sorted(ready[cur_l:], key=lambda x: -len(x[-2][0])-x[-1])
 
-    #                 ready = ready[:cur_l] + sorted(ready[cur_l:], key=lambda x: -len(x[-2][0])-x[-1])
-
-    #                 cur_l -= 1
+        #                 cur_l -= 1
         cur_l += 1
-        
 
     return ready_final, isotopes_mass_error_map
 
-#FIXME исправить функцию для подсчета по списку необходимых индексов 
-def func_for_correlation_matrix(set_of_features):
 
+# FIXME исправить функцию для подсчета по списку необходимых индексов
+def func_for_correlation_matrix(set_of_features):
     logging.info(u'Counting features correlation...')
 
     out_put_dict = defaultdict(list)
@@ -1094,7 +1083,6 @@ def func_for_correlation_matrix(set_of_features):
 
 
 def func_for_correlation_matrix_2(set_of_features, idx_list):
-
     logging.info(u'Counting features correlation...')
 
     out_put_dict = defaultdict(list)
@@ -1131,12 +1119,11 @@ def worker_func_for_correlation_matrix(
         set_of_features,
         qout,
         idx_list
-        ):
-
+):
     result_q = func_for_correlation_matrix_2(
         set_of_features,
         idx_list,
-            )
+    )
 
     if result_q:
         qout.put(result_q)
@@ -1146,7 +1133,6 @@ def worker_func_for_correlation_matrix(
 
 def boosting_correlation_matrix_with_processes(
         number_of_processes, set_of_features):
-
     if number_of_processes == 0:
 
         try:
@@ -1164,19 +1150,19 @@ def boosting_correlation_matrix_with_processes(
     else:
         qout = Queue()
 
-#         qin = list(islice(it, 500000))
-#         if not len(qin):
-#             break
-# #           print 'Loaded 500000 items. Ending cycle.'
+        #         qin = list(islice(it, 500000))
+        #         if not len(qin):
+        #             break
+        # #           print 'Loaded 500000 items. Ending cycle.'
         procs = []
-#FIXME пофиксить(проверить) индексы в idx_list 
+        # FIXME пофиксить(проверить) индексы в idx_list
         set_len = len(set_of_features)
         step = int(set_len / 2 / number_of_processes) + 1
         start_index = 0
 
         for i in range(number_of_processes):
-
-            idx_list = [x for x in range(i * step, (i + 1) * step)] + [x for x in range(set_len - (i+1) * step, set_len - i * step)]
+            idx_list = [x for x in range(i * step, (i + 1) * step)] + [x for x in range(set_len - (i + 1) * step,
+                                                                                        set_len - i * step)]
 
             p = Process(
                 target=worker_func_for_correlation_matrix,

@@ -172,6 +172,9 @@ class peak:
 
         self.medar = [1.0, ]
 
+        self.ms2_mz_array = []
+        self.ms2_intensity_array = []
+
 
     def get_potential_isotope_id(self, i_fast, i_idx):
         tmp = self.finished_hills_fast_dict.get(i_fast, [])
@@ -621,6 +624,155 @@ class peak:
 
         self.selfsort()
 
+    def push_me_to_the_peak_nearest(self, next_mz_array, next_intensity_array, diff, min_length):
+        next_ion_mobility_array = None
+
+        mask = [True] * (len(self.mz_array))
+        tmp1 = []
+        tmp2 = []
+
+        prev_nearest = 0
+
+        self.recalc_fast_array()
+        # self.recalc_fast_array()
+
+        mask = [True] * (len(self.mz_array))
+
+        mz_array_l = len(self.mz_array)
+        for idx, i in enumerate(next_mz_array):
+            best_id, \
+            md_res, \
+            prev_nearest = self.get_nearest_id(
+                i,
+                prev_nearest,
+                diff,
+                mz_array_l,
+                (next_ion_mobility_array[idx]
+                 if not (
+                        next_ion_mobility_array is None)
+                 else None), mask)
+            if best_id:
+                tmp1.append([best_id, idx, md_res])
+
+        tmp1_nearest_id_arr, tmp1_idx_arr, tmp1_diff_arr = self.get_arrays(
+            tmp1)
+
+        sort_list = np.argsort(tmp1_diff_arr)  # try different kinds
+        tmp1_nearest_id_arr = tmp1_nearest_id_arr[sort_list]
+        tmp1_idx_arr = tmp1_idx_arr[sort_list]
+        tmp1_diff_arr = tmp1_diff_arr[sort_list]
+
+        saved_index = set()
+
+        while tmp1:
+
+            # tmp_id = tmp1_idx_arr[0]
+
+            if tmp1_diff_arr.size == 0:
+                break
+
+            if tmp1_diff_arr[0] > diff * 1e-6:
+                break
+
+            tmp2.append((tmp1_nearest_id_arr[0], tmp1_idx_arr[0]))
+
+            saved_index.add(tmp1_idx_arr[0])
+
+            mask[tmp2[-1][0]] = False
+            if any(mask):
+                tmp1_nearest_id_arr = tmp1_nearest_id_arr[1:]
+
+                tmp1_idx_arr = tmp1_idx_arr[1:]
+
+                tmp1_diff_arr = tmp1_diff_arr[1:]
+
+                if tmp1_diff_arr.size == 0:
+                    break
+
+                if tmp1_nearest_id_arr[0] in saved_index:
+
+                    for idx, element in enumerate(tmp1_idx_arr):
+
+                        if tmp1_nearest_id_arr[idx] in saved_index:
+
+                            element_mz = next_mz_array[element]
+                            element_im = (next_ion_mobility_array[element]
+                                          if not (
+                                    next_ion_mobility_array is None)
+                                          else None)
+
+                            # nearest = self.get_nearest_value(element_mz, mask)
+                            # nearest_id_old = self.newid(nearest, mask)
+
+                            nearest_id, \
+                            md_res, \
+                            prev_nearest = self.get_nearest_id(
+                                element_mz,
+                                0,
+                                diff,
+                                0,
+                                element_im, mask)
+
+                            # if nearest_id_old != nearest_id:
+                            #     print('WTF', nearest_id_old, nearest_id)
+
+                            if not nearest_id:
+                                nearest_id = 0
+                                md_res = 1e6
+                            # else:
+                            #     if nearest_id_old != nearest_id:
+                            #         md_old = abs((self.mz_array[nearest_id] - element_mz) / element_mz)
+                            #         print('WTF', nearest_id_old, nearest_id, md_old, md_res)
+
+                            tmp1_nearest_id_arr[idx] = nearest_id
+
+                            tmp1_diff_arr[idx] = md_res
+                        else:
+                            break
+                    sort_list = np.argsort(
+                        tmp1_diff_arr, kind='quicksort')  # try different kinds
+                    tmp1_nearest_id_arr = tmp1_nearest_id_arr[sort_list]
+                    tmp1_idx_arr = tmp1_idx_arr[sort_list]
+                    tmp1_diff_arr = tmp1_diff_arr[sort_list]
+
+            else:
+                break
+
+        for i, idx in tmp2:
+
+            self.ms2_mz_array.append(next_mz_array[idx])
+            self.ms2_intensity_array.append(next_intensity_array[idx])
+            # FIXME
+            # self.mz_array[i] = (self.mz_array[i] + next_mz_array[idx])/2
+            # self.scan_id[i].append(next_scan_id)
+            # self.intensity[i].append(next_intensity_array[idx])
+            # if not (self.ion_mobility is None):
+            #     self.ion_mobility[i].append(next_ion_mobility_array[idx])
+            # self.mass_array[i].append(next_mz_array[idx])
+            # tmp_mass_array = self.mass_array[i][-3:]
+            # self.mz_array[i] = sum(tmp_mass_array) / len(tmp_mass_array)
+            # # self.mz_array[i] = np.average(self.mass_array[i][-3:], weights=self.intensity[i][-3:])
+
+        # added = set(x[1] for x in tmp2)
+        # mask2 = [(False if i in added else True)
+        #          for i in range(len(next_mz_array))]
+        # next_mz_array_size = next_mz_array[mask2].size
+        # self.mz_array = np.append(self.mz_array, next_mz_array[mask2])
+        # # self.recalc_fast_array()
+        #
+        # n_i_a_m = next_intensity_array[mask2]
+        # if not (self.ion_mobility is None):
+        #     n_im_a_m = next_ion_mobility_array[mask2]
+        # n_m_a_m = next_mz_array[mask2]
+        # for i in range(next_mz_array_size):
+        #     self.scan_id.append([next_scan_id, ])
+        #     self.intensity.append([n_i_a_m[i], ])
+        #     if not (self.ion_mobility is None):
+        #         self.ion_mobility.append([n_im_a_m[i], ])
+        #     self.mass_array.append([n_m_a_m[i], ])
+        #
+        # self.selfsort()
+
     def selfsort(self):
         idx = np.argsort(self.mz_array)
         self.mz_array = self.mz_array[idx]
@@ -799,6 +951,8 @@ class feature:
 
         self.charge = each[1][0][1]
         self.shift = each[3]
+        self.ms2_mz = each[6]
+        self.ms2_intensity = each[7]
         # self.mz = finished_hills[each[0]].mz
 
         # a_cus = 0.0033946045716987906 / 1000
@@ -882,6 +1036,7 @@ class feature:
         self.mz_std_2 = each[4][9]
         self.id = each_id
         self.ms2_scan = []
+        self.mz_list = each[6]
         
     def targeted(self, scan):
         self.ms2_scan.append(scan)
