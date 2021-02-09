@@ -636,7 +636,9 @@ def worker_data_to_features(
         start_index,
         end_index,
         mass_accuracy,
-        min_length_hill, proccess_number, ms2_for_analise):
+        min_length_hill,
+        proccess_number,
+        ms2_for_analise):
     start_index = start_index * (1 - 1e-6 * 2 * mass_accuracy)
     end_index = end_index * (1 + 1e-6 * 2 * end_index)
 
@@ -705,8 +707,9 @@ def boosting_firststep_with_processes(
                     step + start_mz,
                     mass_accuracy,
                     min_length_hill,
-                    ms2_data_for_analyse,
-                    i))
+                    i,
+                    ms2_data_for_analyse
+                    ))
             # print(start_index)
             p.start()
             procs.append(p)
