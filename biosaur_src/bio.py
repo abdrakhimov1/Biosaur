@@ -191,7 +191,7 @@ def process_files(args):
         #     str(round((time.time() - start_time) / 60, 1)) + " minutes.")
         # test_peak.split_peaks(hillValleyFactor)
 
-        test_peak.split_peaks(hillValleyFactor)
+        test_peak.split_peaks(hillValleyFactor, min_length_hill)
 
         set_to_del = set()
         for hill_idx, hill in enumerate(test_peak.finished_hills):

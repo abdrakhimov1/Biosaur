@@ -713,70 +713,75 @@ class peak:
         print(len(self.finished_hills))
 
 
-    def split_peaks(self, hillValleyFactor):
+    def split_peaks(self, hillValleyFactor, min_length_hill):
         set_to_del = set()
         new_hills = []
         for hill_idx, hill in enumerate(self.finished_hills):
+
+            hill_length = len(hill.intensity)
+
+            if hill_length >= min_length_hill * 2:
+
             # smothed_intensity = hill.intensity
 
-            smothed_intensity = meanfilt(hill.intensity, 2)
+                smothed_intensity = meanfilt(hill.intensity, 2)
 
-            # smothed_intensity = medfilt(smothed_intensity, 3)
+                # smothed_intensity = medfilt(smothed_intensity, 3)
 
 
-            # smothed_intensity = medfilt(hill.intensity, 3)
-            # smothed_intensity = meanfilt(smothed_intensity, 3)
+                # smothed_intensity = medfilt(hill.intensity, 3)
+                # smothed_intensity = meanfilt(smothed_intensity, 3)
 
-            c_len = len(smothed_intensity) - 3
-            idx = 3
-            # min_idx = False
-            min_idx_list = []
-            min_val = 0
-            l_idx = 0
-            while idx <= c_len:
+                c_len = hill_length - min_length_hill
+                idx = int(min_length_hill)
+                # min_idx = False
+                min_idx_list = []
+                min_val = 0
+                l_idx = 0
+                while idx <= c_len:
 
-                if len(min_idx_list) and idx >= min_idx_list[-1] + 3:
-                    l_idx = min_idx_list[-1]
+                    if len(min_idx_list) and idx >= min_idx_list[-1] + min_length_hill:
+                        l_idx = min_idx_list[-1]
 
-                l_r = max(smothed_intensity[l_idx:idx]) / float(smothed_intensity[idx])
-                    
-                r_r = max(smothed_intensity[idx:]) / float(smothed_intensity[idx])
-                    
-            #     print(l_r, r_r)
-                if l_r >= hillValleyFactor and r_r >= hillValleyFactor:
-                    mult_val = l_r * r_r
-                    # if mult_val < min_val:
-                    #     min_val = mult_val
-                    if not len(min_idx_list) or idx >= min_idx_list[-1] + 3:
-                        min_idx_list.append(idx)
-                        min_val = mult_val
-                    elif mult_val > min_val:
-                        min_idx_list[-1] = idx
-                        min_val = mult_val
-                        # min_idx = idx
-                idx += 1
-            if len(min_idx_list):
-                set_to_del.add(hill_idx)
-                prev_idx = 0
-                for min_idx in min_idx_list:
+                    l_r = max(smothed_intensity[l_idx:idx]) / float(smothed_intensity[idx])
+                    if l_r >= hillValleyFactor:
+                        r_r = max(smothed_intensity[idx:]) / float(smothed_intensity[idx])
+                        if r_r >= hillValleyFactor:
+                #     print(l_r, r_r)
+                    # if l_r >= hillValleyFactor and r_r >= hillValleyFactor:
+                            mult_val = l_r * r_r
+                            # if mult_val < min_val:
+                            #     min_val = mult_val
+                            if not len(min_idx_list) or idx >= min_idx_list[-1] + min_length_hill:
+                                min_idx_list.append(idx)
+                                min_val = mult_val
+                            elif mult_val > min_val:
+                                min_idx_list[-1] = idx
+                                min_val = mult_val
+                                # min_idx = idx
+                    idx += 1
+                if len(min_idx_list):
+                    set_to_del.add(hill_idx)
+                    prev_idx = 0
+                    for min_idx in min_idx_list:
+                        new_hills.append(ready_hill(
+                                            intensity=hill.intensity[prev_idx:min_idx+1],
+                                            scan_id=hill.scan_id[prev_idx:min_idx+1],
+                                            mass=hill.mass[prev_idx:min_idx+1],
+                                            ion_mobility=(
+                                                hill.ion_mobility[prev_idx:min_idx+1] if not
+                                                (hill.ion_mobility is None) else
+                                                None)))
+                        prev_idx = min_idx
+
                     new_hills.append(ready_hill(
-                                        intensity=hill.intensity[prev_idx:min_idx+1],
-                                        scan_id=hill.scan_id[prev_idx:min_idx+1],
-                                        mass=hill.mass[prev_idx:min_idx+1],
+                                        intensity=hill.intensity[min_idx:],
+                                        scan_id=hill.scan_id[min_idx:],
+                                        mass=hill.mass[min_idx:],
                                         ion_mobility=(
-                                            hill.ion_mobility[prev_idx:min_idx+1] if not
+                                            hill.ion_mobility[min_idx:] if not
                                             (hill.ion_mobility is None) else
                                             None)))
-                    prev_idx = min_idx
-
-                new_hills.append(ready_hill(
-                                    intensity=hill.intensity[min_idx:],
-                                    scan_id=hill.scan_id[min_idx:],
-                                    mass=hill.mass[min_idx:],
-                                    ion_mobility=(
-                                        hill.ion_mobility[min_idx:] if not
-                                        (hill.ion_mobility is None) else
-                                        None)))
         # print(len(new_hills))
         # print(len(set_to_del))
 
