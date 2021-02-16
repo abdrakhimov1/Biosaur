@@ -109,8 +109,8 @@ def data_to_features(input_file, max_diff, min_length_hill, proccess_number, sta
         # pass
         k += 1
 
-    # for i in ms2_data_for_analyse:
-    #     peak1.push_me_to_the_peak_nearest(i['m/z array'], i['intensity array'], max_diff, min_length_hill)
+    for i in ms2_data_for_analyse:
+        peak1.push_me_to_the_peak_nearest(i['m/z array'], i['intensity array'], max_diff, min_length_hill)
 
     peak1.push_left(min_length=min_length_hill)
     # peak1.medar = np.array(peak1.medar)

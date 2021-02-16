@@ -44,7 +44,12 @@ def process_files(args):
 
     data_for_analyse = []
     ms2_data_for_analyse = []
+    k = 0
     for z in mzml.read(input_mzml_path):
+        k += 1
+        if k == 20:
+            break
+
         if z['ms level'] == 1:
 
             # if 5.3 <= float(z['scanList']['scan'][0]['scan start time']) <= 5.5:
