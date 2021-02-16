@@ -47,7 +47,7 @@ def process_files(args):
     k = 0
     for z in mzml.read(input_mzml_path):
         k += 1
-        if k == 20:
+        if k == 10000:
             break
 
         if z['ms level'] == 1:
