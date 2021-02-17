@@ -8,6 +8,9 @@ from . import funcs
 from . import classes
 import logging
 from . import utills
+import collections
+import json
+from math import sqrt
 logging.basicConfig(format=u'%(filename)s[LINE:%(lineno)d]#\
 %(levelname)-8s [%(asctime)s]  %(message)s', level=logging.DEBUG)
 
@@ -398,12 +401,13 @@ def process_files(args):
 
     data_for_analyse = []
 
-    flag = 0
+    num_flag = 10
     for z in mzml.read(input_mzml_path):
         if z['ms level'] == 1:
-            flag = 1
+            flag = 0
         if z['ms level'] == 2:
-            if flag == 1:
+            flag += 1
+            if flag == num_flag:
                 idx = z['intensity array'] >= min_intensity
                 z['intensity array'] = z['intensity array'][idx]
                 z['m/z array'] = z['m/z array'][idx]
@@ -414,9 +418,8 @@ def process_files(args):
                 z['intensity array'] = z['intensity array'][idx]
                 if 'mean inverse reduced ion mobility array' in z:
                     z['mean inverse reduced ion mobility array'] = z['mean inverse reduced ion mobility array'][idx]
-
                 data_for_analyse.append(z)
-                flag = 0
+
 
     logging.info(u'Number of MS2 scans: ' + str(len(data_for_analyse)))
     tmp_str = 'maximum amount of'
@@ -573,6 +576,65 @@ def process_files(args):
                 x.ms2_scan]]) + '\n')
         out_file.close()
 
+        p = pd.read_table(output_file)
+        ms2 = pd.read_table('ms2.features.tsv')
+        big_result = ""
+
+        def cos_correlation_fill_zeroes_2(scans_1, scans_2, intensity_1, intensity_2):
+
+            inter_set = set(scans_1).intersection(set(scans_2))
+            if len(inter_set) >= 2:
+
+                d1 = dict()
+                for i, j in zip(intensity_1, scans_1):
+                    d1[j] = i
+                d2 = dict()
+                for i, j in zip(intensity_2, scans_2):
+                    d2[j] = i
+
+                top = 0
+
+                for i in inter_set:
+                    h1_val = d1.get(i)
+                    h2_val = d2.get(i)
+                    top += h1_val * h2_val
+
+                bottom = sqrt(sum(v ** 2 for v in intensity_1)) * sqrt(sum(v ** 2 for v in intensity_2))
+                # bottom = math.sqrt(sum(v * v for key, v in hill_1.idict.items() if key in inter_set)) * math.sqrt(sum(v * v for key, v in hill_2.idict.items() if key in inter_set))
+                return top / bottom
+
+            else:
+                return 0
+
+
+        for j in p.loc[p['mz'] < 375].iterrows():
+            d = {}
+            str_result = ""
+            str_result += "BEGIN IONS\nTITLE=title\nPEPMASS=" + str(j[1][17]) + " " + str(
+                j[1][2]) + "\nRTINSECONDS=" + str(j[1][1]) + "\nCHARGE=" + str(j[1][3]) + "+\n"
+
+            corr_level = 0.6
+            for i in ms2.iterrows():
+                corr = cos_correlation_fill_zeroes_2([k - 1 for k in json.loads(i[1][12])], json.loads(j[1][12]),
+                                                   json.loads(i[1][11]), json.loads(j[1][11]))
+                if corr > 0:
+                    if corr > corr_level:
+                        d[float(i[1][17])] = max(json.loads(i[1][11]))
+            od = collections.OrderedDict(sorted(d.items()))
+
+            for k, v in od.items():
+                str_result += str(k) + " " + str(v) + "\n"
+
+            str_result += 'END IONS\n\n'
+            str_result.replace(r'\n', '\n')
+            if len(od) == 0:
+                pass
+            else:
+                big_result += str_result
+
+        text_file = open("20190524_EXP1_Evo2_DBJ_DIAprot_SDS_500ng_15k2s_21min_01.mgf", "w")
+        text_file.write(big_result.replace('title', '20190524_EXP1_Evo2_DBJ_DIAprot_SDS_500ng_15k2s_21min_01'))
+        text_file.close()
 
         print('Total ms2 features: ' + str(len(features)))
         

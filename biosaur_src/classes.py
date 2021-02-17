@@ -863,9 +863,6 @@ class feature:
         else:
             self.ion_mobility = None
 
-        # self.scan_id = scans_for_average[self.id_for_scan]
-        # self.scan_id = finished_hills[each[0]].scan_id[self.id_for_scan]
-        # self.RT = self.scan_numb
         self.scan_id = int(np.average(scans_for_average, weights=intensity_for_average))
         self.RT = int(np.average(scans_for_average, weights=intensity_for_average))
         # self.sulfur = (1 if each[2] else 0)
