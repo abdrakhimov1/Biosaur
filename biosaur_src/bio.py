@@ -515,6 +515,64 @@ def process_files(args):
                     each_id,
                     negative_mode, isotopes_mass_error_map))
 
+        out_file = open('ms2.features.tsv', 'a')
+        out_file.write('massCalib\
+        \trtApex\
+        \tintensityApex\
+        \tcharge\
+        \tnIsotopes\
+        \tnScans\
+        \tsulfur\
+        \tcos_corr_1\
+        \tcos_corr_2\
+        \tdiff_for_output\
+        \tcorr_fill_zero\
+        \tintensity_1\
+        \tscan_id_1\
+        \tmz_std_1\
+        \tintensity_2\
+        \tscan_id_2\
+        \tmz_std_2\
+        \tmz\
+        \trtStart\
+        \trtEnd\
+        \tid\
+        \tion_mobility\
+        \tFAIMS\
+        \ttargeted_mode\
+        \n')
+
+        for x in features:
+            out_file.write('\t'.join([str(z) for z in [
+                x.neutral_mass,
+                test_RT_dict[x.scan_id],
+                x.intensity,
+                x.charge,
+                x.isotopes_numb + 1,
+                x.scan_numb,
+                x.sulfur,
+                x.cos_corr,
+                x.cos_corr_2,
+                x.diff_for_output,
+                x.corr_fill_zero,
+                x.intensity_1,
+                x.scan_id_1,
+                x.mz_std_1,
+                x.intensity_2,
+                x.scan_id_2,
+                x.mz_std_2,
+                x.mz,
+                test_RT_dict[x.scans[0]],
+                test_RT_dict[x.scans[-1]],
+                x.id,
+                (
+                    x.ion_mobility if not
+                    (x.ion_mobility is None)
+                    else 0),
+                faims_val,
+                x.ms2_scan]]) + '\n')
+        out_file.close()
+
 
         print('Total ms2 features: ' + str(len(features)))
         
