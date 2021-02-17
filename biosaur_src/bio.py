@@ -516,7 +516,7 @@ def process_files(args):
                     negative_mode, isotopes_mass_error_map))
 
 
-        print('Total ms2 features: ' + len(features))
+        print('Total ms2 features: ' + str(len(features)))
         
         total_time = time.time()
         print('=========================================================== \n')
