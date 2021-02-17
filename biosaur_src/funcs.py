@@ -924,8 +924,8 @@ def boosting_secondstep_with_processes(
             all_theoretical_int, all_exp_intensity, 0.6)[0], 0.99999999))
 
     # ready = sorted(ready, key=lambda x: -x[-1])
-    print(ready[0][-2])
-    #ready = sorted(ready, key=lambda x: -len(x[-2][0]) - x[-1])
+    #print(ready[0][-2])
+    ready = sorted(ready, key=lambda x: -len(x[-2][0]) - x[-1])
     # ready = sorted(ready, key=lambda x: -len(x[-2][0]))
 
     # for pep_feature in ready:
