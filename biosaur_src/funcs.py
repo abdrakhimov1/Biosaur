@@ -587,7 +587,7 @@ def iter_hills(
 
                             # print(shift)
 
-                            iter_candidates = iter_candidates[:number_of_passed_isotopes]
+                            # iter_candidates = iter_candidates[:number_of_passed_isotopes]
 
                             # добавить s_candidates
                             j2 = iter_candidates[0][0]
