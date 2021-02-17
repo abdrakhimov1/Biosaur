@@ -262,33 +262,33 @@ def process_files(args):
                     each,
                     each_id,
                     negative_mode, isotopes_mass_error_map))
-        
-        
-        
-        
+
+
+
+
         if pep_xml_file_path != '0':
 #             targeted_pepxml_file = pepxml.read(pep_xml_file_path)
             targeted_dataframe = utills.prepare_dataframe(pep_xml_file_path)[0]
             targeted_mode_dict = dict()
             for index, i in targeted_dataframe.iterrows():
                 targeted_mode_dict[i['spectrum']] = {
-                    'RT' : i['RT exp'], 
+                    'RT' : i['RT exp'],
                     'expect_score' : i['expect'],
                     'mz' :(i['calc_neutral_pep_mass'] + i['assumed_charge'] * 1.0072) / i['assumed_charge']}
-                
-            
+
+
             for idx, f in enumerate(features):
                 keys_to_del = []
                 for key, value in targeted_mode_dict.items():
                     if abs(f.mz - value['mz']) < f.mz_tol:
-                        
+
                         if test_RT_dict[f.scans[0]] < value['RT']:
 
                             if value['RT'] < test_RT_dict[f.scans[-1]]:
 
                                 f.targeted((key, value['expect_score']))
                                 keys_to_del.append(key)
-                  
+
                 for each in keys_to_del:
                     del targeted_mode_dict[each]
                 print(len(targeted_mode_dict))
@@ -300,15 +300,15 @@ def process_files(args):
                     new_features.append(i)
 
             features = new_features
-        
-        
-        
-        
-        
-        
-        
-        
-        
+
+
+
+
+
+
+
+
+
         # print(
         #     "Timer: " +
         #     str(round((features_time - start_time) / 60, 1)) + " minutes.")
@@ -382,23 +382,147 @@ def process_files(args):
                     x.ms2_scan]]) + '\n')
             out_file.close()
 
-        if pep_xml_file_path != '0':    
+        if pep_xml_file_path != '0':
             bio = pd.read_table(output_file)
             ms_ms_df = bio.sort_values(['cos_corr_1', 'nIsotopes'], ascending=[False, False]).drop_duplicates(subset='targeted_mode', keep="last")
             ms_ms_df['ms_2'] = ms_ms_df['targeted_mode'].apply(lambda x: x.split(',')[0][3:-1:])
             ms_ms_df['ms_2_expect_val'] = ms_ms_df['targeted_mode'].apply(lambda x: x.split(',')[1][0:-2])
             bio = ms_ms_df.drop(['targeted_mode'], axis=1)
             bio.to_csv(output_file)
+
+
+
+
+    print("Starting ms2 analys")
+    print("Reading spectra...")
+
+    data_for_analyse = []
+
+    flag = 0
+    for z in mzml.read(input_mzml_path):
+        if z['ms level'] == 1:
+            flag = 1
+        if z['ms level'] == 2:
+            if flag == 1:
+                idx = z['intensity array'] >= min_intensity
+                z['intensity array'] = z['intensity array'][idx]
+                z['m/z array'] = z['m/z array'][idx]
+                if 'mean inverse reduced ion mobility array' in z:
+                    z['mean inverse reduced ion mobility array'] = z['mean inverse reduced ion mobility array'][idx]
+                idx = np.argsort(z['m/z array'])
+                z['m/z array'] = z['m/z array'][idx]
+                z['intensity array'] = z['intensity array'][idx]
+                if 'mean inverse reduced ion mobility array' in z:
+                    z['mean inverse reduced ion mobility array'] = z['mean inverse reduced ion mobility array'][idx]
+
+                data_for_analyse.append(z)
+                flag = 0
+
+    logging.info(u'Number of MS2 scans: ' + str(len(data_for_analyse)))
+    tmp_str = 'maximum amount of'
+    logging.info(
+        u'Converting your data, using ' +
+        str(number_of_processes if number_of_processes != 0 else tmp_str) +
+        ' processes...')
+
+    if not args['faims']:
+        faims_set = set([None, ])
+        if 'FAIMS compensation voltage' in data_for_analyse[0]:
+            logging.warning(u'\nWARNING: FAIMS detected in data,\
+                 but option --faims was not enabled!\n')
+
+    else:
+        faims_set = set()
+        for z in data_for_analyse:
+            if z['FAIMS compensation voltage'] not in faims_set:
+                faims_set.add(z['FAIMS compensation voltage'])
+            else:
+                break
+        logging.info(u'Detected FAIMS values: ', faims_set)
+
+    data_start_index = 0
+
+    for faims_val in faims_set:
+
+        if faims_val is None:
+            data_for_analyse_tmp = data_for_analyse
+            faims_val = 0
+        else:
+            data_for_analyse_tmp = []
+            for z in data_for_analyse:
+                if z['FAIMS compensation voltage'] == faims_val:
+                    data_for_analyse_tmp.append(z)
+
+        test_peak, test_RT_dict = funcs.boosting_firststep_with_processes(
+            number_of_processes, data_for_analyse_tmp, mass_accuracy,
+            min_length_hill, data_start_index=data_start_index)
+
+        data_start_index += len(data_for_analyse_tmp)
+
+        logging.info(u'All data converted to hills...')
+        logging.info('Processing hills...')
+        logging.info(
+            'Your hills proccesing with ' +
+            str(number_of_processes if number_of_processes != 0 else tmp_str) +
+            ' processes...')
+
+        test_peak.split_peaks(hillValleyFactor)
+
+        set_to_del = set()
+        for hill_idx, hill in enumerate(test_peak.finished_hills):
+            if len(hill.mass) >= 40:
+                if max(hill.intensity) < 2 * max(hill.intensity[0], hill.intensity[-1]):
+                    set_to_del.add(hill_idx)
+
+        print(len(test_peak.finished_hills))
+
+        for idx in sorted(list(set_to_del))[::-1]:
+            del test_peak.finished_hills[idx]
+
+        print(len(test_peak.finished_hills))
+
+        logging.info(
+            str(len(test_peak.finished_hills)) +
+            u' hills were detected...')
+        logging.info(
+            str(len(test_peak.finished_hills)) +
+            u' hills were detected...')
+
+        test_peak.sort_finished_hills()
+
+        logging.info('Start recalc_fast_array_for_finished_hills...')
+
+        test_peak.recalc_fast_array_for_finished_hills()
+
+        logging.info('Start boosting_secondstep_with_processes...')
+
+        tmp, isotopes_mass_error_map = funcs.boosting_secondstep_with_processes(
+            number_of_processes,
+            test_peak,
+            min_charge,
+            max_charge,
+            min_intensity,
+            mass_accuracy,
+            min_length)
+
+        features = []
+
+        for each_id, each in enumerate(tmp):
+            features.append(
+                classes.feature(
+                    test_peak.finished_hills,
+                    each,
+                    each_id,
+                    negative_mode, isotopes_mass_error_map))
+
+
+        print('Total ms2 features: ' + len(features))
         
         total_time = time.time()
         print('=========================================================== \n')
         logging.info("Ready!")
         logging.info(str(len(features)) + u' features were detected.')
         logging.info(u'All your features were saved in ' + output_file)
-        # print("Ready!")
-        # print(
-        #     "Total time: " +
-        #     str(round((total_time - start_time) / 60, 1)) + " minutes.")
         logging.info(
             "Total time: " +
             str(round((total_time - start_time) / 60, 1)) +
