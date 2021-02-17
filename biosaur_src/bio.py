@@ -160,7 +160,7 @@ def process_files(args):
 
         test_peak, test_RT_dict = funcs.boosting_firststep_with_processes(
             number_of_processes, data_for_analyse_tmp, mass_accuracy,
-            min_length_hill, data_start_index=data_start_index)
+            min_length_hill, hillValleyFactor, data_start_index=data_start_index)
         
 
         data_start_index += len(data_for_analyse_tmp)
@@ -191,20 +191,6 @@ def process_files(args):
         #     str(round((time.time() - start_time) / 60, 1)) + " minutes.")
         # test_peak.split_peaks(hillValleyFactor)
 
-        test_peak.split_peaks(hillValleyFactor, min_length_hill)
-
-        set_to_del = set()
-        for hill_idx, hill in enumerate(test_peak.finished_hills):
-            if len(hill.mass) >= 40:
-                if max(hill.intensity) < 2 * max(hill.intensity[0], hill.intensity[-1]):
-                    set_to_del.add(hill_idx)
-        
-        print(len(test_peak.finished_hills))
-
-        for idx in sorted(list(set_to_del))[::-1]:
-            del test_peak.finished_hills[idx]
-        
-        print(len(test_peak.finished_hills))
 
         
         logging.info(
@@ -215,7 +201,6 @@ def process_files(args):
         logging.info(
             str(len(test_peak.finished_hills)) +
             u' hills were detected...')
-
 
         test_peak.sort_finished_hills()
 

@@ -76,30 +76,30 @@ def data_to_features(input_file, max_diff, min_length_hill, proccess_number, sta
     for i in input_file:
         idx = (i['m/z array'] >= start_index) & (i['m/z array'] < end_index)
         # (dists >= r) & (dists <= r+dr)
-        i['m/z array'] = i['m/z array'][idx]
-        i['intensity array'] = i['intensity array'][idx]
+        new_mz_array = i['m/z array'][idx]
+        new_intensity_array = i['intensity array'][idx]
         if 'mean inverse reduced ion mobility array' in i:
-            i['mean inverse reduced ion mobility array'] = i['mean inverse reduced ion mobility array'][idx]
+            new_ion_mobility_array = i['mean inverse reduced ion mobility array'][idx]
+        else:
+            new_ion_mobility_array = None
         if k == 0:
             peak1 = classes.peak(
-                i['m/z array'],
-                i['intensity array'],
+                new_mz_array,
+                new_intensity_array,
                 i['index'],
                 i['index'],
-                i.get(
-                    'mean inverse reduced ion mobility array',
-                    None))
+                new_ion_mobility_array,
+                )
             RT_dict[i['index']] = float(
                 i['scanList']['scan'][0]['scan start time'])
 
         if k > 0:
             next_peak_i = classes.next_peak(
-                i['m/z array'],
-                i['intensity array'],
+                new_mz_array,
+                new_intensity_array,
                 i['index'],
-                i.get(
-                    'mean inverse reduced ion mobility array',
-                    None))
+                new_ion_mobility_array,
+                )
             peak1.push_me_to_the_peak(next_peak_i, max_diff, min_length_hill)
             RT_dict[i['index']] = float(
                 i['scanList']['scan'][0]['scan start time'])
@@ -326,14 +326,16 @@ def iter_hills(
     #     int_arr = binom.pmf(tmplist, i, 0.0425)
     #     s_dict[i] = int_arr
 
-    tmplist_s = [1, 2, 3]
+    # tmplist_s = [1, 2, 3]
 
-    s_list = [1, 2, 3]
-    s_dict = dict()
+    # s_list = [1, 2, 3]
+    # s_dict = dict()
 
-    for i in s_list:
-        int_arr = binom.pmf(tmplist_s, i, 0.0425)
-        s_dict[i] = int_arr
+    # for i in s_list:
+    #     int_arr = binom.pmf(tmplist_s, i, 0.0425)
+    #     s_dict[i] = int_arr
+
+    # s_list = [s_dict[i] for i in tmplist_s]
 
     # s_list = [0.9575, 0.0425, 0.0425**2, 0.0425**3]
 
@@ -374,19 +376,17 @@ def iter_hills(
             right_border_i = peak.finished_hills[i].scan_id[-1]
             mz_tol = mass_acc * 1e-6 * peak.finished_hills[i].mz
 
+            # s_tmp_intensity = s_list
+
+            # s_all_theoretical_int = [
+            #     peak.finished_hills[i].max_intensity *
+            #     s_tmp_intensity[z] /
+            #     s_tmp_intensity[0] for z in numbers[:2]]
+
             for charge in charges:
                 
                 candidates = []
                 s_candidates = []
-
-                neutral_mass = peak_1_mz * charge
-                tmp_intensity = a[int(100 * (neutral_mass // 100))]
-                s_tmp_intensity = s_list
-
-                s_all_theoretical_int = [
-                    peak.finished_hills[i].max_intensity *
-                    s_tmp_intensity[z] /
-                    s_tmp_intensity[0] for z in numbers[:2]]
 
                 k = i
                 ks = i
@@ -394,7 +394,6 @@ def iter_hills(
 
                     tmp_candidates = []
                     tmp_s_candidates = []
-
 
                     m_to_check = peak_1_mz + (1.00335 * numb / charge)
                     m_to_check_fast = int(m_to_check/0.02)
@@ -444,68 +443,68 @@ def iter_hills(
                     #                         tmp_candidates.append((j, charge, cos_cor_test, diff/m_to_check2*1e6, n_sulf))
 
 
-                    if numb == 2:
+                    # if numb == 2:
 
-                        m_to_check = peak_1_mz + \
-                            (1.9957958999999974 / 2 * numb / charge)
-                        m_to_check_fast = int(m_to_check/0.02)
+                    #     m_to_check = peak_1_mz + \
+                    #         (1.9957958999999974 / 2 * numb / charge)
+                    #     m_to_check_fast = int(m_to_check/0.02)
 
-                        # for j in range(ks + 1, size, 1):
-                        for j in peak.get_potential_isotope_id(m_to_check_fast, i):
+                    #     # for j in range(ks + 1, size, 1):
+                    #     for j in peak.get_potential_isotope_id(m_to_check_fast, i):
 
-                            if j not in ready_set and j != candidates[-1][0]:
-                                peak_2_mz = peak.finished_hills[j].mz
-                                diff = peak_2_mz - m_to_check
+                    #         if j not in ready_set and j != candidates[-1][0]:
+                    #             peak_2_mz = peak.finished_hills[j].mz
+                    #             diff = peak_2_mz - m_to_check
 
-                                # if diff > mz_tol:
-                                #     ks = j - 1
-                                #     break
+                    #             # if diff > mz_tol:
+                    #             #     ks = j - 1
+                    #             #     break
 
-                                # if
-                                # cos_correlation_fill_zeroes(peak.finished_hills[i],
-                                # peak.finished_hills[j]) >= 0.7:
-                                if abs(diff) <= mz_tol:
-                                    s_cos_cor = cos_correlation_fill_zeroes(
-                                            peak.finished_hills[i],
-                                            peak.finished_hills[j])
-                                    if s_cos_cor >= 0.6:
+                    #             # if
+                    #             # cos_correlation_fill_zeroes(peak.finished_hills[i],
+                    #             # peak.finished_hills[j]) >= 0.7:
+                    #             if abs(diff) <= mz_tol:
+                    #                 s_cos_cor = cos_correlation_fill_zeroes(
+                    #                         peak.finished_hills[i],
+                    #                         peak.finished_hills[j])
+                    #                 if s_cos_cor >= 0.6:
 
-                                        tmp_s_candidates.append([j, charge, s_cos_cor, diff/m_to_check*1e6])
+                    #                     tmp_s_candidates.append([j, charge, s_cos_cor, diff/m_to_check*1e6])
 
-                                        # if len(s_candidates) < numb / 2:
+                    #                     # if len(s_candidates) < numb / 2:
 
-                                        #     s_candidates.append(
-                                        #         (j, charge))
+                    #                     #     s_candidates.append(
+                    #                     #         (j, charge))
 
-                                        # else:
+                    #                     # else:
 
-                                        #     intensity1 = (
-                                        #         peak.finished_hills[
-                                        #             s_candidates[-1][0]]
-                                        #         .max_intensity)
-                                        #     intensity2 = (
-                                        #         peak.finished_hills[j]
-                                        #         .max_intensity)
-                                        #     s_th_i = s_all_theoretical_int[
-                                        #         int(numb / 2)]
-                                        #     s_candidates[-1] = (
-                                        #         first_or_second(
-                                        #             s_candidates[-1][0],
-                                        #             j,
-                                        #             s_candidates[-1][1],
-                                        #             charge,
-                                        #             intensity1,
-                                        #             intensity2,
-                                        #             s_th_i))
+                    #                     #     intensity1 = (
+                    #                     #         peak.finished_hills[
+                    #                     #             s_candidates[-1][0]]
+                    #                     #         .max_intensity)
+                    #                     #     intensity2 = (
+                    #                     #         peak.finished_hills[j]
+                    #                     #         .max_intensity)
+                    #                     #     s_th_i = s_all_theoretical_int[
+                    #                     #         int(numb / 2)]
+                    #                     #     s_candidates[-1] = (
+                    #                     #         first_or_second(
+                    #                     #             s_candidates[-1][0],
+                    #                     #             j,
+                    #                     #             s_candidates[-1][1],
+                    #                     #             charge,
+                    #                     #             intensity1,
+                    #                     #             intensity2,
+                    #                     #             s_th_i))
 
-                                            # pass
+                    #                         # pass
                     if len(tmp_candidates):
                         # if len(tmp_candidates) > 1:
                         #     print(len(tmp_candidates))
                         candidates.append(tmp_candidates)
 
-                        if len(tmp_s_candidates):
-                            s_candidates = tmp_s_candidates
+                        # if len(tmp_s_candidates):
+                        #     s_candidates = tmp_s_candidates
 
 
                     if len(candidates) < numb:
@@ -517,30 +516,40 @@ def iter_hills(
 
                 if candidates:
 
+                    neutral_mass = peak_1_mz * charge
+                    tmp_intensity = a[int(100 * (neutral_mass // 100))]
 
-                    if len(s_candidates):
+                    all_theoretical_int = [
+                        peak.finished_hills[i].max_intensity *
+                        tmp_intensity[z] /
+                        tmp_intensity[0] for z in numbers]
 
-                        tmp_s_candidates = []
-
-                        for iter_s_candidates in s_candidates:
+                    # s_candidates = []
 
 
-                            s_all_exp_intensity = [peak.finished_hills[i].max_intensity]
-                            # for k in iter_s_candidates:
-                            s_all_exp_intensity.append(
-                                peak.finished_hills[iter_s_candidates[0]].max_intensity)
+                    # if len(s_candidates):
 
-                            s_c_cor = cos_correlation(
-                                    s_all_theoretical_int,
-                                    s_all_exp_intensity)
-                            if s_c_cor > 0.6:
-                                tmp_s_candidates.append(iter_s_candidates)
-                                tmp_s_candidates[-1].append(s_c_cor)
+                    #     tmp_s_candidates = []
 
-                        if len(tmp_s_candidates):
-                            s_candidates = sorted(tmp_s_candidates, key=lambda x: -x[3])
-                        else:
-                            s_candidates = []
+                    #     for iter_s_candidates in s_candidates:
+
+
+                    #         s_all_exp_intensity = [peak.finished_hills[i].max_intensity]
+                    #         # for k in iter_s_candidates:
+                    #         s_all_exp_intensity.append(
+                    #             peak.finished_hills[iter_s_candidates[0]].max_intensity)
+
+                    #         s_c_cor = cos_correlation(
+                    #                 s_all_theoretical_int,
+                    #                 s_all_exp_intensity)
+                    #         if s_c_cor > 0.6:
+                    #             tmp_s_candidates.append(iter_s_candidates)
+                    #             tmp_s_candidates[-1].append(s_c_cor)
+
+                    #     if len(tmp_s_candidates):
+                    #         s_candidates = sorted(tmp_s_candidates, key=lambda x: -x[3])
+                    #     else:
+                    #         s_candidates = []
 
                     for iter_candidates in itertools.product(*candidates):
                         # if len(iter_candidates) > 1:
@@ -558,11 +567,6 @@ def iter_hills(
                         #     else:
                         #         iter_candidates_new.append(z)
                         # iter_candidates = iter_candidates_new
-
-                        all_theoretical_int = [
-                            peak.finished_hills[i].max_intensity *
-                            tmp_intensity[z] /
-                            tmp_intensity[0] for z in numbers]
 
                         all_exp_intensity = [peak.finished_hills[i].max_intensity]
 
@@ -592,7 +596,7 @@ def iter_hills(
                             # добавить s_candidates
                             j2 = iter_candidates[0][0]
                             scan_id_2 = peak.finished_hills[j2].scan_id
-                            mz_std_2 = peak.finished_hills[j2].mz_std
+                            mass_2 = peak.finished_hills[j2].mass
                             intensity_2 = peak.finished_hills[j2].intensity
                             ready.append([
                                 i,
@@ -605,10 +609,10 @@ def iter_hills(
                                     diff_for_output,
                                     peak.finished_hills[i].intensity,
                                     peak.finished_hills[i].scan_id,
-                                    peak.finished_hills[i].mz_std,
+                                    peak.finished_hills[i].mass,
                                     intensity_2,
                                     scan_id_2,
-                                    mz_std_2],
+                                    mass_2],
                                     [all_theoretical_int, all_exp_intensity]])
                             # ready_set.add(i)
                             # for ic in candidates:
@@ -643,7 +647,7 @@ def worker_data_to_features(
         start_index,
         end_index,
         mass_accuracy,
-        min_length_hill, proccess_number):
+        min_length_hill, hillValleyFactor, proccess_number):
 
     start_index = start_index * (1 - 1e-6 * 2 * mass_accuracy)
     end_index = end_index * (1 + 1e-6 * 2 * end_index)
@@ -657,6 +661,19 @@ def worker_data_to_features(
         end_index
         )
 
+    result_peak.split_peaks(hillValleyFactor, min_length_hill)
+
+    set_to_del = set()
+    for hill_idx, hill in enumerate(result_peak.finished_hills):
+        if len(hill.mass) >= 40:
+            if max(hill.intensity) < 2 * max(hill.intensity[0], hill.intensity[-1]):
+                set_to_del.add(hill_idx)
+
+    for idx in sorted(list(set_to_del))[::-1]:
+        del result_peak.finished_hills[idx]
+
+    result_peak.calc_accurate_mz()
+
     if result_peak:
         qout.put((result_peak, result_RT_dict))
 
@@ -668,6 +685,7 @@ def boosting_firststep_with_processes(
         data_for_analyse,
         mass_accuracy,
         min_length_hill,
+        hillValleyFactor,
         data_start_index=0):
 
     for idx, v in enumerate(data_for_analyse):
@@ -710,7 +728,7 @@ def boosting_firststep_with_processes(
                     start_mz,
                     step + start_mz,
                     mass_accuracy,
-                    min_length_hill, i))
+                    min_length_hill, hillValleyFactor, i))
             # print(start_index)
             p.start()
             procs.append(p)

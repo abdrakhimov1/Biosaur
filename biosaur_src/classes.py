@@ -19,7 +19,7 @@ class ready_hill:
     def __init__(self, intensity, scan_id, mass, ion_mobility):
         # self.mz = np.median(mass)
         # self.mz = np.mean(mass)
-        self.mz_std = np.std(mass)
+        # self.mz_std = np.std(mass)
         self.intensity = intensity
         self.scan_id = scan_id
         self.scan_set = set(scan_id)
@@ -28,7 +28,8 @@ class ready_hill:
         tmp = max(range(len(self.intensity)), key=self.intensity.__getitem__)
         self.scan_of_max_intensity = self.scan_id[tmp]
         self.max_intensity = self.intensity[tmp]
-        self.mz = np.average(self.mass, weights=self.intensity)
+        # self.mz = np.average(self.mass, weights=self.intensity)
+        # self.mz = sum(weight * value for weight, value in zip(self.intensity, self.mass)) / sum(self.intensity)
         # self.mz = self.mass[tmp]
         # self.max_intensity = sum(self.intensity)
         if not (ion_mobility is None):
@@ -47,7 +48,6 @@ class ready_hill:
         #     sum(v**2 for v in self.idict.values()))
         intensity_np = np.array(intensity)
         self.sqrt_of_i_sum_squares = np.sqrt(np.sum(np.power(intensity_np, 2)))
-
 
 class next_peak:
 
@@ -712,6 +712,9 @@ class peak:
 
         print(len(self.finished_hills))
 
+    def calc_accurate_mz(self):
+        for hill in self.finished_hills:
+            hill.mz = sum(weight * value for weight, value in zip(hill.intensity, hill.mass)) / sum(hill.intensity)
 
     def split_peaks(self, hillValleyFactor, min_length_hill):
         set_to_del = set()
@@ -738,6 +741,7 @@ class peak:
                 min_idx_list = []
                 min_val = 0
                 l_idx = 0
+
                 while idx <= c_len:
 
                     if len(min_idx_list) and idx >= min_idx_list[-1] + min_length_hill:
@@ -785,15 +789,11 @@ class peak:
         # print(len(new_hills))
         # print(len(set_to_del))
 
-        print(len(self.finished_hills))
 
         for idx in sorted(list(set_to_del))[::-1]:
             del self.finished_hills[idx]
         
-        print(len(self.finished_hills))
         self.finished_hills.extend(new_hills)
-
-        print(len(self.finished_hills))
 
     # self.finished_hills = result
 
@@ -881,10 +881,10 @@ class feature:
         self.diff_for_output = each[4][3]
         self.intensity_1 = each[4][4]
         self.scan_id_1 = each[4][5]
-        self.mz_std_1 = each[4][6]
+        self.mz_std_1 = np.std(each[4][6])
         self.intensity_2 = each[4][7]
         self.scan_id_2 = each[4][8]
-        self.mz_std_2 = each[4][9]
+        self.mz_std_2 = np.std(each[4][9])
         self.id = each_id
         self.ms2_scan = []
         
