@@ -1,10 +1,9 @@
 import itertools
-from multiprocessing import cpu_count
-from multiprocessing import Process
-from multiprocessing import Queue
+from multiprocessing import Queue, Process, cpu_count
 
 from scipy.stats import binom
-from .funcs import cos_correlation_fill_zeroes, cos_correlation, checking_cos_correlation_for_carbon
+from .funcs import cos_correlation_fill_zeroes, cos_correlation, checking_cos_correlation_for_carbon, calibrate_mass
+import numpy as np
 
 
 def iter_hills_dia(
@@ -386,3 +385,192 @@ def boosting_secondstep_dia_with_processes(
                     ready = ready + item
         for p in procs:
             p.join()
+
+    ready = sorted(ready, key=lambda x: -len(x[1]))
+    ready_final = []
+    ready_set = set()
+
+    # import pickle
+    # pickle.dump(ready, open('ready.pickle', 'wb'))
+
+    isotopes_mass_error_map = {}
+    for ic in range(1, 10, 1):
+        isotopes_mass_error_map[ic] = []
+    for pep_feature in ready:
+        for icc, cand in enumerate(pep_feature[1]):
+            if icc != 1 or cand[4] == 0:
+                isotopes_mass_error_map[icc + 1].append(cand[3])
+    for ic in range(1, 10, 1):
+        if len(isotopes_mass_error_map[ic]) >= 1000:
+
+            try:
+
+                true_md = np.array(isotopes_mass_error_map[ic])
+
+                mass_left = -min(isotopes_mass_error_map[ic])
+                mass_right = max(isotopes_mass_error_map[ic])
+
+                try:
+                    mass_shift, mass_sigma, covvalue = calibrate_mass(0.01, mass_left, mass_right, true_md)
+                except:
+                    try:
+                        mass_shift, mass_sigma, covvalue = calibrate_mass(0.05, mass_left, mass_right, true_md)
+                    except:
+                        mass_shift, mass_sigma, covvalue = calibrate_mass(0.25, mass_left, mass_right, true_md)
+                if np.isinf(covvalue):
+                    mass_shift, mass_sigma, covvalue = calibrate_mass(0.05, mass_left, mass_right, true_md)
+
+                isotopes_mass_error_map[ic] = [mass_shift, mass_sigma]
+
+            except:
+                isotopes_mass_error_map[ic] = isotopes_mass_error_map[ic - 1]
+
+        else:
+            isotopes_mass_error_map[ic] = isotopes_mass_error_map[ic - 1]
+    # print(isotopes_mass_error_map)
+
+    for pfidx, pep_feature in enumerate(ready):
+        allowed_idx = 1
+        for icc, cand in enumerate(pep_feature[1]):
+            if abs(cand[3] - isotopes_mass_error_map[icc + 1][0]) / isotopes_mass_error_map[icc + 1][1] <= 5 or (
+                    icc == 1 and cand[4] > 0):
+                allowed_idx += 1
+            else:
+                break
+
+        all_theoretical_int, all_exp_intensity = pep_feature[5]
+        all_theoretical_int = all_theoretical_int[:allowed_idx]
+        all_exp_intensity = all_exp_intensity[:allowed_idx]
+
+        ready[pfidx][1] = ready[pfidx][1][:allowed_idx]
+        ready[pfidx][5] = [all_theoretical_int, all_exp_intensity]
+
+        ready[pfidx].append(min(checking_cos_correlation_for_carbon(
+            all_theoretical_int, all_exp_intensity, 0.6)[0], 0.99999999))
+
+    # ready = sorted(ready, key=lambda x: -x[-1])
+    ready = sorted(ready, key=lambda x: -len(x[-2][0]) - x[-1])
+    # ready = sorted(ready, key=lambda x: -len(x[-2][0]))
+
+    # for pep_feature in ready:
+    #     if pep_feature[0] not in ready_set:
+    #         if not any(cand[0] in ready_set for cand in pep_feature[1]):
+    #             ready_final.append(pep_feature)
+    #             ready_set.add(pep_feature[0])
+    #             for cand in pep_feature[1]:
+    #                 ready_set.add(cand[0])
+    #             # for s_cand in pep_feature[2]:
+    #             #     if s_cand[0] not in ready_set:
+    #             #         ready_set.add(s_cand[0])
+    #             #         break
+
+    #         else:
+    #             tmp = []
+    #             for cand in pep_feature[1]:
+    #                 if cand[0] not in ready_set:
+    #                     tmp.append(cand)
+    #                 else:
+    #                     break
+    #             if len(tmp):
+    #                 pep_feature[1] = tmp
+    #                 all_theoretical_int, all_exp_intensity = pep_feature[5]
+    #                 all_theoretical_int = all_theoretical_int[:len(tmp)]
+    #                 all_exp_intensity = all_exp_intensity[:len(tmp)]
+    #                 (cos_corr,
+    #                         number_of_passed_isotopes,
+    #                         shift) = checking_cos_correlation_for_carbon(
+    #                         all_theoretical_int, all_exp_intensity, 0.6)
+
+    #                 if cos_corr:
+    #                     ready_final.append(pep_feature)
+    #                     ready_set.add(pep_feature[0])
+    #                     for cand in pep_feature[1]:
+    #                         ready_set.add(cand[0])
+    #                     # for s_cand in pep_feature[2]:
+    #                     #     if s_cand[0] not in ready_set:
+    #                     #         ready_set.add(s_cand[0])
+    #                     #         break
+    max_l = len(ready)
+    cur_l = 0
+
+    ready_final = []
+    ready_set = set()
+    ready = sorted(ready, key=lambda x: -len(x[-2][0]) - x[-1])
+    cur_isotopes = len(ready[0][-2][0])
+
+    cnt_mark = 0
+
+    while cur_l < max_l:
+        cnt_mark += 1
+        #     if cnt_mark > 1000:
+        #         break
+        pep_feature = ready[cur_l]
+        # print(cur_l, max_l, cur_isotopes, len(ready_final), -len(pep_feature[-2][0])-pep_feature[-1])
+        n_iso = len(pep_feature[-2][0])
+        if n_iso < cur_isotopes:
+            ready = sorted(ready, key=lambda x: -len(x[-2][0]))
+            cur_isotopes = n_iso
+            cur_l = 0
+
+        if pep_feature[0] not in ready_set:
+            if not any(cand[0] in ready_set for cand in pep_feature[1]):
+                ready_final.append(pep_feature)
+                ready_set.add(pep_feature[0])
+                for cand in pep_feature[1]:
+                    ready_set.add(cand[0])
+                for s_cand in pep_feature[2]:
+                    ready_set.add(s_cand[0])
+                del ready[cur_l]
+                max_l -= 1
+                cur_l -= 1
+
+            else:
+                tmp = []
+
+                #             cur_isotopes = len(pep_feature[1])
+
+                for cand in pep_feature[1]:
+                    if cand[0] not in ready_set:
+                        tmp.append(cand)
+                    else:
+                        break
+                if len(tmp):
+                    pep_feature[1] = tmp
+                    all_theoretical_int, all_exp_intensity = pep_feature[5]
+                    all_theoretical_int = all_theoretical_int[:len(tmp)]
+                    all_exp_intensity = all_exp_intensity[:len(tmp)]
+                    (cos_corr,
+                     number_of_passed_isotopes,
+                     shift) = checking_cos_correlation_for_carbon(
+                        all_theoretical_int, all_exp_intensity, 0.6)
+                    if cos_corr:
+                        ready[cur_l] = [pep_feature[0],
+                                        pep_feature[1],
+                                        pep_feature[2],
+                                        pep_feature[3],
+                                        pep_feature[4],
+                                        [all_theoretical_int, all_exp_intensity],
+                                        cos_corr]
+
+
+                    else:
+                        del ready[cur_l]
+                        max_l -= 1
+                        cur_l -= 1
+
+
+                else:
+                    del ready[cur_l]
+                    max_l -= 1
+                    cur_l -= 1
+        else:
+            del ready[cur_l]
+            max_l -= 1
+            cur_l -= 1
+
+        #                 ready = ready[:cur_l] + sorted(ready[cur_l:], key=lambda x: -len(x[-2][0])-x[-1])
+
+        #                 cur_l -= 1
+        cur_l += 1
+
+    return ready_final, isotopes_mass_error_map
