@@ -292,6 +292,7 @@ def iter_hills_dia(
                                 scan_id_2,
                                 mz_std_2],
                                 [all_theoretical_int, all_exp_intensity]])
+    print(len(ready))
     return ready
 
 
