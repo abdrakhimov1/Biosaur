@@ -8,6 +8,7 @@ from . import funcs
 from . import classes
 import logging
 from . import utills
+from . import iter_hills_dia
 import collections
 import json
 from math import sqrt
@@ -499,7 +500,7 @@ def process_files(args):
 
         logging.info('Start boosting_secondstep_with_processes...')
 
-        tmp, isotopes_mass_error_map = funcs.boosting_secondstep_with_processes(
+        tmp, isotopes_mass_error_map = iter_hills_dia.boosting_secondstep_dia_with_processes(
             number_of_processes,
             test_peak,
             min_charge,
