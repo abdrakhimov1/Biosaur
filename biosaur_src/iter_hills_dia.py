@@ -271,8 +271,6 @@ def iter_hills_dia(
                                             all_theoretical_int[0:1],
                                             all_exp_intensity[0:1])
 
-                    iter_candidates = iter_candidates[:number_of_passed_isotopes]
-
                     j2 = iter_candidates[0][0]
                     scan_id_2 = peak.finished_hills[j2].scan_id
                     mz_std_2 = peak.finished_hills[j2].mz_std
