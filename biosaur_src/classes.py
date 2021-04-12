@@ -101,11 +101,12 @@ class peak_ion_mobility:
         self.mz_array[index] = np.mean(self.mass_array[index])
         self.ion_mobility_max[index] = max(self.ion_mobility_array[index])
         self.ion_mobility_min[index] = min(self.ion_mobility_array[index])
-        if self.intensity_array[index][-1] > self.intensity_array[index][-2]:
-            self.intensity_max[index] = self.intensity_array[index][-1]
-            self.ion_mobility_opt[index] = self.ion_mobility_array[index][-1]
+        # if self.intensity_array[index][-1] > self.intensity_max[index]:
+        #     # self.mz_array[index] = 
+        #     self.intensity_max[index] = self.intensity_array[index][-1]
+        #     self.ion_mobility_opt[index] = self.ion_mobility_array[index][-1]
 
-    def push_me_to_the_peak(self, mz, intensity, ion_mobility, diff):
+    def push_me_to_the_peak_ion_mob(self, mz, intensity, ion_mobility, diff):
         # nearest_ids = self.get_nearest_values(mz)
         flag = 0
 
@@ -118,9 +119,9 @@ class peak_ion_mobility:
             if tmp_diff <= mass_accuracy:
                 if abs(
                         self.ion_mobility_max[nearest_id] -
-                        ion_mobility) <= 0.1 or abs(
+                        ion_mobility) <= 0.05 or abs(
                         self.ion_mobility_min[nearest_id] -
-                        ion_mobility) <= 0.1:
+                        ion_mobility) <= 0.05:
                     flag = 1
                     self.append_and_recalc(
                         mz, intensity, ion_mobility, nearest_id)
@@ -178,8 +179,8 @@ class peak:
         # tmp.remove(i_idx)
         return tmp
 
-    def recalc_fast_array_for_finished_hills(self):
-        m_koef = 0.02
+    def recalc_fast_array_for_finished_hills(self, mz_step):
+        m_koef = mz_step
         im_koef = 0.02
         self.finished_hills_fast_array = [int(fh.mz/m_koef) for fh in self.finished_hills]
         self.finished_hills_fast_dict = defaultdict(set)
@@ -188,8 +189,8 @@ class peak:
             self.finished_hills_fast_dict[fm+1].add(idx)
             self.finished_hills_fast_dict[fm].add(idx)
 
-    def recalc_fast_array(self):
-        m_koef = 0.02
+    def recalc_fast_array(self, mz_step):
+        m_koef = mz_step
         im_koef = 0.02
         # self.fast_array = [int(tm/m_koef) for tm in self.mz_array]
         self.fast_array = (self.mz_array/m_koef).astype(int)
@@ -213,6 +214,8 @@ class peak:
 
     def crosslink_simple(self, mass_accuracy):
 
+        mz_step = mass_accuracy * 1e-6 * 2500
+
         crosslink_counter = 0
         self.finished_hills = sorted(
             self.finished_hills,
@@ -233,7 +236,7 @@ class peak:
         map_ids_2 = defaultdict(set)
 
         self.finished_hills_fast_dict = defaultdict(set)
-        m_koef = 0.02
+        m_koef = mz_step
 
         for i, hill in enumerate(self.finished_hills):
 
@@ -359,6 +362,7 @@ class peak:
         #     self.medar.append(1.0)
 
         mask_to_del = [True] * self.mz_array.size
+        set_to_del = set()
         for i in range(self.mz_array.size)[::-1]:
 
             # degree_actual = id_real - self.scan_id[i][0] - len(self.scan_id[i]) + 1
@@ -370,13 +374,17 @@ class peak:
                 # if degree_actual > check_degree or (degree_actual == 2 and
                 # len(self.scan_id[i]) <= 3):
 
-                list_intensity = self.intensity.pop(i)
+                # list_intensity = self.intensity.pop(i)
+                list_intensity = self.intensity[i]
                 if not (self.ion_mobility is None):
-                    list_ion_mobility = self.ion_mobility.pop(i)
+                    # list_ion_mobility = self.ion_mobility.pop(i)
+                    list_ion_mobility = self.ion_mobility[i]
                 else:
                     list_ion_mobility = None
-                list_scan_id = self.scan_id.pop(i)
-                list_mass = self.mass_array.pop(i)
+                # list_scan_id = self.scan_id.pop(i)
+                list_scan_id = self.scan_id[i]
+                # list_mass = self.mass_array.pop(i)
+                list_mass = self.mass_array[i]
                 lsi = len(list_scan_id)
                 if lsi >= min_length:
                     tmp_ready_hill = ready_hill(intensity=list_intensity,
@@ -387,9 +395,17 @@ class peak:
                     self.finished_hills.append(tmp_ready_hill)
 
                 mask_to_del[i] = False
+                set_to_del.add(i)
 
                 # if len(tmp_ready_hill.scan_id) >= min_length:
                 #     self.finished_hills.append(tmp_ready_hill)
+
+        self.intensity = [i for j, i in enumerate(self.intensity) if j not in set_to_del]
+        
+        self.scan_id = [i for j, i in enumerate(self.scan_id) if j not in set_to_del]
+        self.mass_array = [i for j, i in enumerate(self.mass_array) if j not in set_to_del]
+        if not (self.ion_mobility is None):
+            self.ion_mobility = [i for j, i in enumerate(self.ion_mobility) if j not in set_to_del]
 
         self.mz_array = self.mz_array[mask_to_del]
 
@@ -423,14 +439,14 @@ class peak:
     def get_potential_nearest(self, i_fast):
         return self.fast_dict.get(i_fast, None)
 
-    def get_nearest_id(self, i, prev_nearest, diff, mz_array_l, ion_mobility, mask):
+    def get_nearest_id(self, i, prev_nearest, diff, mz_array_l, ion_mobility, mask, mz_step):
         mass_diff = diff * 1e-6 * i
         best_diff = 2 * mass_diff
         best_id = False
         cur_md_abs = 0
         best_prev_nearest_id = False
 
-        i_fast = int(i / 0.02)
+        i_fast = int(i / mz_step)
 
         set_idx = self.get_potential_nearest(i_fast)
 
@@ -465,7 +481,7 @@ class peak:
         tmp1_diff_arr = np.array([x[2] for x in tmp1])
         return tmp1_nearest_id_arr, tmp1_idx_arr, tmp1_diff_arr
 
-    def push_me_to_the_peak(self, next_peak, diff, min_length):
+    def push_me_to_the_peak(self, next_peak, diff, min_length, mz_step):
 
         next_mz_array = next_peak.next_mz_array
         next_intensity_array = next_peak.next_intensity_array
@@ -483,8 +499,7 @@ class peak:
 
         prev_nearest = 0
 
-        self.recalc_fast_array()
-        # self.recalc_fast_array()
+        self.recalc_fast_array(mz_step)
         
         mask = [True] * (len(self.mz_array))
 
@@ -500,7 +515,7 @@ class peak:
                     (next_ion_mobility_array[idx]
                         if not (
                         next_ion_mobility_array is None)
-                        else None), mask)
+                        else None), mask, mz_step)
             if best_id:
                 tmp1.append([best_id, idx, md_res])
 
@@ -562,18 +577,11 @@ class peak:
                                     0,
                                     diff,
                                     0,
-                                    element_im, mask)
-
-                            # if nearest_id_old != nearest_id:
-                            #     print('WTF', nearest_id_old, nearest_id)
+                                    element_im, mask, mz_step)
 
                             if not nearest_id:
                                 nearest_id = 0
                                 md_res = 1e6
-                            # else:
-                            #     if nearest_id_old != nearest_id:
-                            #         md_old = abs((self.mz_array[nearest_id] - element_mz) / element_mz)
-                            #         print('WTF', nearest_id_old, nearest_id, md_old, md_res)
 
                             tmp1_nearest_id_arr[idx] = nearest_id
 
@@ -606,7 +614,6 @@ class peak:
                  for i in range(len(next_mz_array))]
         next_mz_array_size = next_mz_array[mask2].size
         self.mz_array = np.append(self.mz_array, next_mz_array[mask2])
-        # self.recalc_fast_array()
 
         n_i_a_m = next_intensity_array[mask2]
         if not (self.ion_mobility is None):
@@ -699,8 +706,6 @@ class peak:
                                             hill.ion_mobility[min_idx-1:] if not
                                             (hill.ion_mobility is None) else
                                             None)))
-        # print(len(new_hills))
-        # print(len(set_to_del))
 
         print(len(self.finished_hills))
 
@@ -800,7 +805,7 @@ class peak:
 
 class feature:
 
-    def __init__(self, finished_hills, each, each_id, negative_mode, isotopes_mass_error_map):
+    def __init__(self, finished_hills, each, each_id, negative_mode, isotopes_mass_error_map, mass_accuracy):
 
         self.charge = each[1][0][1]
         self.shift = each[3]
@@ -820,7 +825,7 @@ class feature:
         self.mz = np.average(mass_for_average2, weights=intensity_for_average2)
         
         
-        mass_acc = 8
+        mass_acc = mass_accuracy
         self.mz_tol = mass_acc*1e-6*self.mz
 
         # mass_for_average = finished_hills[each[0]].mass + list(itertools.chain.from_iterable([(z * (1 - 1e-6 * isotopes_mass_error_map[i_numb+1][0]) - (i_numb+1)*1.00335/ech[1]) for z in finished_hills[ech[0]].mass] for i_numb, ech in enumerate(each[1])))

@@ -43,32 +43,12 @@ def data_to_features(input_file, max_diff, min_length_hill, proccess_number, sta
     # working_area['intensity array'] = working_area['intensity array'][idx]
 
     # print(len(input_file[0]['m/z array']))
-    if 'mean inverse reduced ion mobility array' in input_file[0]:
-        for idx, i in enumerate(input_file):
-            # print(idx, len(i['m/z array']))
-            peak_ion_mobility_object = False
-            for mz, intensity, ion_mobility in zip(
-                    i['m/z array'],
-                    i['intensity array'],
-                    i['mean inverse reduced ion mobility array']):
-                # if intensity >= 300:
-                if not peak_ion_mobility_object:
-                    peak_ion_mobility_object = classes.peak_ion_mobility(
-                        mz, intensity, ion_mobility)
-                else:
-                    peak_ion_mobility_object.push_me_to_the_peak(
-                        mz, intensity, ion_mobility, max_diff)
-            input_file[idx]['m/z array'] = np.array(
-                peak_ion_mobility_object.mz_array)
-            input_file[idx]['intensity array'] = np.array(
-                peak_ion_mobility_object.intensity_max)
-            tmp_string = 'mean inverse reduced ion mobility array'
-            input_file[idx][tmp_string] = np.array(
-                peak_ion_mobility_object.ion_mobility_opt)
         # if idx > 10:
         #     break
 
     RT_dict = dict()
+
+    mz_step = max_diff * 1e-6 * 2500
 
     k = 0
     # print(len(input_file))
@@ -100,7 +80,7 @@ def data_to_features(input_file, max_diff, min_length_hill, proccess_number, sta
                 i['index'],
                 new_ion_mobility_array,
                 )
-            peak1.push_me_to_the_peak(next_peak_i, max_diff, min_length_hill)
+            peak1.push_me_to_the_peak(next_peak_i, max_diff, min_length_hill, mz_step)
             RT_dict[i['index']] = float(
                 i['scanList']['scan'][0]['scan start time'])
         # if k > 10:
@@ -319,6 +299,8 @@ def iter_hills(
 
     a = dict()
 
+    mz_step = mass_acc * 1e-6 * 2500
+
     # s_list = [1, 2, 3]
     # s_dict = dict()
 
@@ -396,7 +378,7 @@ def iter_hills(
                     tmp_s_candidates = []
 
                     m_to_check = peak_1_mz + (1.00335 * numb / charge)
-                    m_to_check_fast = int(m_to_check/0.02)
+                    m_to_check_fast = int(m_to_check/mz_step)
 
                     for j in peak.get_potential_isotope_id(m_to_check_fast, i):
 
@@ -688,6 +670,7 @@ def boosting_firststep_with_processes(
         hillValleyFactor,
         data_start_index=0):
 
+    
     for idx, v in enumerate(data_for_analyse):
         v['index'] = idx + 1 + data_start_index
 
@@ -703,6 +686,20 @@ def boosting_firststep_with_processes(
 
         result_peak, result_RT_dict = data_to_features(
             data_for_analyse, mass_accuracy, min_length_hill, 1, 0, 2500)
+
+
+        result_peak.split_peaks(hillValleyFactor, min_length_hill)
+
+        set_to_del = set()
+        for hill_idx, hill in enumerate(result_peak.finished_hills):
+            if len(hill.mass) >= 40:
+                if max(hill.intensity) < 2 * max(hill.intensity[0], hill.intensity[-1]):
+                    set_to_del.add(hill_idx)
+
+        for idx in sorted(list(set_to_del))[::-1]:
+            del result_peak.finished_hills[idx]
+
+        result_peak.calc_accurate_mz()
 
     else:
         qout = Queue()

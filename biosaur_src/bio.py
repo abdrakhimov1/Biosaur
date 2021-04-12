@@ -63,7 +63,7 @@ def process_files(args):
 
 
                 data_for_analyse.append(z)
-                # if len(data_for_analyse) > 50:
+                # if len(data_for_analyse) > 100:
                 #     break
 
     logging.info(u'Number of MS1 scans: ' + str(len(data_for_analyse)))
@@ -158,6 +158,40 @@ def process_files(args):
                 if z['FAIMS compensation voltage'] == faims_val:
                     data_for_analyse_tmp.append(z)
 
+
+        if 'mean inverse reduced ion mobility array' in data_for_analyse_tmp[0]:
+            for idx, i in enumerate(data_for_analyse_tmp):
+                # print(idx, len(i['m/z array']))
+                peak_ion_mobility_object = False
+                for mz, intensity, ion_mobility in zip(
+                        i['m/z array'],
+                        i['intensity array'],
+                        i['mean inverse reduced ion mobility array']):
+                    # if intensity >= 300:
+                    if not peak_ion_mobility_object:
+                        peak_ion_mobility_object = classes.peak_ion_mobility(
+                            mz, intensity, ion_mobility)
+                    else:
+                        peak_ion_mobility_object.push_me_to_the_peak_ion_mob(
+                            mz, intensity, ion_mobility, mass_accuracy)
+                if peak_ion_mobility_object is False:
+                    data_for_analyse_tmp[idx]['m/z array'] = np.array([])
+                    data_for_analyse_tmp[idx]['intensity array'] = np.array([])
+                    tmp_string = 'mean inverse reduced ion mobility array'
+                    data_for_analyse_tmp[idx][tmp_string] = np.array([])
+                else:
+                    # peak_ion_mobility_object.mz_array = [np.mean(z) for z in peak_ion_mobility_object.mass_array]
+                    peak_ion_mobility_object.ion_mobility_opt = [np.mean(z) for z in peak_ion_mobility_object.ion_mobility_array]
+                    peak_ion_mobility_object.intensity_max = [np.sum(z) for z in peak_ion_mobility_object.intensity_array]
+                    data_for_analyse_tmp[idx]['m/z array'] = np.array(
+                        peak_ion_mobility_object.mz_array)
+                    data_for_analyse_tmp[idx]['intensity array'] = np.array(
+                        peak_ion_mobility_object.intensity_max)
+                    tmp_string = 'mean inverse reduced ion mobility array'
+                    data_for_analyse_tmp[idx][tmp_string] = np.array(
+                        peak_ion_mobility_object.ion_mobility_opt)
+
+
         test_peak, test_RT_dict = funcs.boosting_firststep_with_processes(
             number_of_processes, data_for_analyse_tmp, mass_accuracy,
             min_length_hill, hillValleyFactor, data_start_index=data_start_index)
@@ -207,7 +241,8 @@ def process_files(args):
 
         logging.info('Start recalc_fast_array_for_finished_hills...')
 
-        test_peak.recalc_fast_array_for_finished_hills()
+        mz_step = mass_accuracy * 1e-6 * 2500
+        test_peak.recalc_fast_array_for_finished_hills(mz_step)
 
         # output = open('/home/mark/first_step.pkl', 'wb')
         # import pickle
@@ -246,7 +281,7 @@ def process_files(args):
                     test_peak.finished_hills,
                     each,
                     each_id,
-                    negative_mode, isotopes_mass_error_map))
+                    negative_mode, isotopes_mass_error_map, mass_accuracy))
         
         
         
