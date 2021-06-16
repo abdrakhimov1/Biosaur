@@ -8,6 +8,7 @@ from . import funcs
 from . import classes
 import logging
 from . import utills
+import os
 logging.basicConfig(format=u'%(filename)s[LINE:%(lineno)d]#\
 %(levelname)-8s [%(asctime)s]  %(message)s', level=logging.DEBUG)
 
@@ -130,20 +131,17 @@ def process_files(args):
 
     out_file.close()
 
-    if not args['faims']:
-        faims_set = set([None, ])
-        if 'FAIMS compensation voltage' in data_for_analyse[0]:
-            logging.warning(u'\nWARNING: FAIMS detected in data,\
-                 but option --faims was not enabled!\n')
-
-    else:
+    if 'FAIMS compensation voltage' in data_for_analyse[0]:
+        logging.info(u'\nFAIMS was detected in data')
         faims_set = set()
         for z in data_for_analyse:
             if z['FAIMS compensation voltage'] not in faims_set:
                 faims_set.add(z['FAIMS compensation voltage'])
             else:
                 break
-        logging.info(u'Detected FAIMS values: ', faims_set)
+        logging.info(u'Detected FAIMS values: %s' % str(faims_set))
+    else:
+        faims_set = set([None, ])
 
     data_start_index = 0
 
@@ -320,9 +318,19 @@ def process_files(args):
                     new_features.append(i)
 
             features = new_features
-        
-        
-        
+
+        if os.path.exists(output_file):
+            dft = pd.read_table(output_file)
+            max_id_val = dft['id'].max()
+            if np.isnan(max_id_val):
+                new_id = 1
+            else:
+                new_id = max_id_val + 1
+        else:
+            new_id = 1
+        for ftr in features:
+            ftr.id = new_id
+            new_id += 1
         
         
         

@@ -15,26 +15,6 @@ coloredlogs.install()
 
 def run():
 
-    welcome_message = pyfiglet.figlet_format(
-        "Welcome to Biosaur",
-        font="slant")
-    print(colored(welcome_message, 'green'))
-    print('=========================================================== \n')
-    print(colored(u'Copyright [2019] [ABDRAKHIMOV & IVANOV Inc. \u00a9] \n\
-Licensed under the Apache License, Version 2.0 (the "License"); \n\
-\n\
-you may not use this file except in compliance with the License. \n\
-You may obtain a copy of the License at \n\
- \n\
-    http://www.apache.org/licenses/LICENSE-2.0 \n\
- \n\
-Unless required by applicable law or agreed to in writing, software \n\
-distributed under the License is distributed on an "AS IS" BASIS, \n\
-WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied. \n\
-See the License for the specific language governing permissions and \n\
-limitations under the License. \n', 'yellow'))
-    print('=========================================================== \n')
-
     logging.info(u'Starting program with following params...')
     parser = argparse.ArgumentParser(
         description='Detection of peptide features',
@@ -121,11 +101,11 @@ limitations under the License. \n', 'yellow'))
         '--pep_xml_file_path',
         default='0',
         help='Pepxml filepath')
-    parser.add_argument(
-        '-faims',
-        '--faims',
-        help='Use when mzML contain FAIMS data',
-        action='store_true')
+    # parser.add_argument(
+        # '-faims',
+        # '--faims',
+        # help='Use when mzML contain FAIMS data',
+        # action='store_true')
     args = vars(parser.parse_args())
     log_args = json.dumps(args, indent=2, sort_keys=False)
     logging.basicConfig(format='%(levelname)9s: %(asctime)s %(message)s',
