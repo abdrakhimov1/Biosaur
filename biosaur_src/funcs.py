@@ -8,6 +8,7 @@ import math
 from multiprocessing import Queue, Process, cpu_count
 import logging
 import itertools
+from copy import deepcopy
 from collections import defaultdict
 logging.basicConfig(format=u'%(filename)s[LINE:%(lineno)d]#\
 %(levelname)-8s [%(asctime)s] %(message)s', level=logging.DEBUG)
@@ -892,7 +893,7 @@ def boosting_secondstep_with_processes(
             if icc != 1 or cand[4] == 0:
                 isotopes_mass_error_map[icc+1].append(cand[3])
     for ic in range(1, 10, 1):
-        if len(isotopes_mass_error_map[ic]) >= 1000:
+        if ic == 1 and len(isotopes_mass_error_map[ic]) >= 10:
 
             try:
 
@@ -917,8 +918,12 @@ def boosting_secondstep_with_processes(
                 isotopes_mass_error_map[ic] = isotopes_mass_error_map[ic-1]
 
         else:
-            isotopes_mass_error_map[ic] = isotopes_mass_error_map[ic-1]
-    # print(isotopes_mass_error_map)
+            if ic-1 in isotopes_mass_error_map:
+                isotopes_mass_error_map[ic] = deepcopy(isotopes_mass_error_map[ic-1])
+                isotopes_mass_error_map[ic][0] = isotopes_mass_error_map[ic][0] - 0.45
+            else:
+                isotopes_mass_error_map[ic] = [0, 10]
+    print(isotopes_mass_error_map)
 
     for pfidx, pep_feature in enumerate(ready):
         allowed_idx = 1
