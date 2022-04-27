@@ -37,7 +37,9 @@
   </p>
 </p>
 
-
+<!-- Latest Version -->
+## Latest Version
+The biosaur2, which is a rewritten version of Biosaur, is available at https://github.com/markmipt/biosaur2
 
 <!-- TABLE OF CONTENTS -->
 ## Table of Contents
